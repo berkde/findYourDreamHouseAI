@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: FindYourDreamHouseAI
+
+  threads:
+    virtual:
+      enabled: true   # <-- property belongs here, not under spring.sql
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: admin
+    password: admin
+    # Use env vars (see profile files for URL/creds)
+    hikari:
+      maximum-pool-size: 20          # tune per CPU/throughput
+      minimum-idle: 5
+      connection-timeout: 30000      # 30s
+      idle-timeout: 600000           # 10m
+      max-lifetime: 1800000          # 30m (keep < PgBouncer/server timeouts)
+      leak-detection-threshold: 60000
+      validation-timeout: 5000
+      # Optional: explicit query (or rely on JDBC isValid())
+      # connection-test-query: SELECT 1
+
+  jpa:
+    open-in-view: false              # avoid OSIV anti-pattern
+    show-sql: false
+    properties:
+      hibernate:
+
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 100            # larger batches for insert/update bursts
+        order_inserts: true
+        order_updates: true
+        # Recommended in prod for stability:
+        # temp.use_jdbc_metadata_defaults: false
+    generate-ddl: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info,metrics,prometheus"
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: "when_authorized"
+
+server:
+  shutdown: graceful
+  compression:
+    enabled: true
+
+logging:
+  level:
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+
+aws:
+  region: us-east-2
+  secretId: dev/dreamai/backend
+
+security:
+  jwt:
+    secret-id: dev/dreamai/backend
