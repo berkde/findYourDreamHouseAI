@@ -39,6 +39,11 @@ spring:
         # temp.use_jdbc_metadata_defaults: false
     generate-ddl: true
 
+  cache:
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=10m
+    cache-names: users,userProfiles,houseAds,houseAdsList,houseAdsSearch,houseAdDetails,secrets,roles,authorities
+
 management:
   endpoints:
     web:
@@ -49,7 +54,13 @@ management:
       probes:
         enabled: true
       show-details: "when_authorized"
-
+  metrics:
+    export:
+      cloudwatch:
+        namespace: "DreamHouseAI/Prod"
+        step: 1m
+        batchSize: 20
+        enabled: true
 server:
   shutdown: graceful
   compression:
@@ -59,10 +70,24 @@ logging:
   level:
     org.hibernate.SQL: INFO
     org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    io:
+      micrometer:
+        cloudwatch2: DEBUG
+        core:
+          instrument:
+            push: DEBUG
+    com.dreamhouse.ai: INFO
+    org.springframework.security: INFO
+    org.springframework.web: INFO
+  file:
+    name: logs/application.log
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
 
 aws:
   region: us-east-2
-  secretId: dev/dreamai/backend
 
 security:
   jwt:
