@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface UserRepository extends CrudRepository<UserEntity, Long> {
     @EntityGraph(attributePaths = {"roles", "roles.authorities", "billingAddress"})
     Optional<UserEntity> findByUsername(String username);
+    @EntityGraph(attributePaths = {"roles", "roles.authorities", "billingAddress"})
     Optional<UserEntity> findByUserID(String userID);
     Boolean existsByUsername(String username);
     List<UserEntity> findAll();
