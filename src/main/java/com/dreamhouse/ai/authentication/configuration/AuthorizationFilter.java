@@ -41,7 +41,6 @@ public class AuthorizationFilter extends BasicAuthenticationFilter {
             @NonNull FilterChain chain) throws ServletException, IOException {
 
         String requestURI = request.getRequestURI();
-        // Allow unauthenticated access to explicitly permitted endpoints only
         if ("OPTIONS".equalsIgnoreCase(request.getMethod()) ||
                 requestURI.equals("/login") ||
                 requestURI.equals("/api/v1/auth/register") ||
@@ -60,7 +59,6 @@ public class AuthorizationFilter extends BasicAuthenticationFilter {
 
         token = token.substring("Bearer ".length());
 
-        // Do not log tokens to avoid leaking sensitive information
 
         if (!StringUtils.hasText(token)) {
             log.error("Empty authorization header");
