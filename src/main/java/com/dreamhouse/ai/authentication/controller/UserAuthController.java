@@ -6,6 +6,7 @@ import com.dreamhouse.ai.authentication.model.response.UserRegisterResponse;
 import com.dreamhouse.ai.authentication.service.impl.UserServiceImpl;
 import com.dreamhouse.ai.authentication.util.SecurityUtil;
 import jakarta.annotation.security.PermitAll;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,7 +31,7 @@ public class UserAuthController {
 
     @PostMapping(path = "/register")
     @PermitAll
-    public ResponseEntity<UserRegisterResponse> registerUser(@RequestBody UserRegisterRequest registerRequest) {
+    public ResponseEntity<UserRegisterResponse> registerUser(@Valid @RequestBody UserRegisterRequest registerRequest) {
         log.info("registerUser - Registering user: {}", registerRequest.username());
         UserRegisterResponse registeredUser = userService.registerUser(registerRequest);
         return ResponseEntity.ok(registeredUser);
