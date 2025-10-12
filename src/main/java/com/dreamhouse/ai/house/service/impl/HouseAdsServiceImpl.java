@@ -329,5 +329,52 @@ public class HouseAdsServiceImpl implements HouseAdsService {
             return List.of();
         }
     }
+    
+
+    @Cacheable(value = "houseAdsList", key = "#page + '_' + #size + '_' + #sortBy")
+    @Override
+    public List<HouseAdDTO> getHouseAdsWithPagination(int page, int size, String sortBy) {
+        log.info("Getting house ads with pagination - page: {}, size: {}, sortBy: {}", page, size, sortBy);
+        
+        try {
+            var houseAds = houseAdRepository.findAll();
+            return houseAds.stream()
+                    .map(houseAd -> modelMapper.map(houseAd, HouseAdDTO.class))
+                    .toList();
+        } catch (Exception e) {
+            log.error("Error getting house ads with pagination", e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Cacheable(value = "houseAdsSearch", key = "#query + '_' + #page + '_' + #size")
+    @Override
+    public List<HouseAdDTO> searchHouseAdsWithPagination(String query, int page, int size) {
+        log.info("Searching house ads with query: {}, page: {}, size: {}", query, page, size);
+        
+        try {
+            var houseAds = houseAdRepository.findAllByTitleContainingIgnoreCase(query);
+            return houseAds.stream()
+                    .map(houseAd -> modelMapper.map(houseAd, HouseAdDTO.class))
+                    .toList();
+        } catch (Exception e) {
+            log.error("Error searching house ads", e);
+            return Collections.emptyList();
+        }
+    }
+
+    @Cacheable(value = "houseAdDetails", key = "#houseAdId")
+    @Override
+    public Optional<HouseAdDTO> getHouseAdDetails(String houseAdId) {
+        log.info("Getting house ad details for ID: {}", houseAdId);
+        
+        try {
+            var houseAd = houseAdRepository.findByHouseAdUid(houseAdId);
+            return houseAd.map(ad -> modelMapper.map(ad, HouseAdDTO.class));
+        } catch (Exception e) {
+            log.error("Error getting house ad details for ID: {}", houseAdId, e);
+            return Optional.empty();
+        }
+    }
 
 }
