@@ -32,6 +32,10 @@ public interface HouseAdsService {
     Optional<HouseAdMessageDTO> findByMessageUid(String messageUid);
     List<HouseAdMessageDTO> findAllByHouseAdUid(String houseAdUid);
 
+    List<HouseAdDTO> getHouseAdsWithPagination(int page, int size, String sortBy);
+    List<HouseAdDTO> searchHouseAdsWithPagination(String query, int page, int size);
+    Optional<HouseAdDTO> getHouseAdDetails(String houseAdId);
+
 
 }
 
