@@ -1,4 +1,16 @@
-# FindYourDreamHouseAI 🏠
+<p align="center">
+  <picture>
+    <!-- Optional dark-mode version -->
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/dreamhouseai-logo.png">
+    <!-- Light/default -->
+    <img alt="DreamHouseAI" src="assets/DreamHouse%20AI%20Logo%20Design.png" width="160">
+  </picture>
+</p>
+
+<h1 align="center">FindYourDreamHouseAI 🏠</h1>
+<p align="center">AI-powered house search & recommendations</p>
+
+
 
 [![Java](https://img.shields.io/badge/Java-24-007396?logo=java)](./pom.xml)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.x-6DB33F?logo=spring-boot)](./pom.xml)
