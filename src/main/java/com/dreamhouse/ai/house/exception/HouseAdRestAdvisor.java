@@ -11,6 +11,26 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class HouseAdRestAdvisor {
     private static final Logger log = LoggerFactory.getLogger(HouseAdRestAdvisor.class);
 
+
+    @ExceptionHandler(SecretParsingException.class)
+    public ResponseEntity<String> handleSecretParsingException(final SecretParsingException ex) {
+        log.warn("Secret parsing exception: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body("Reason: " + ex.getMessage());
+    }
+
+    @ExceptionHandler(SecretFormatException.class)
+    public ResponseEntity<String> handleSecretFormatException(final SecretFormatException ex) {
+        log.warn("Secret format exception: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body("Reason: " + ex.getMessage());
+    }
+
+
+    @ExceptionHandler(NoSecretKeyFoundException.class)
+    public ResponseEntity<String> handleNoSecretKeyFoundException(final NoSecretKeyFoundException ex) {
+        log.warn("No secret key found exception: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body("Reason: " + ex.getMessage());
+    }
+
     @ExceptionHandler(UnsupportedContentException.class)
     public ResponseEntity<String> handleUnsupportedContentException(final UnsupportedContentException ex) {
         log.warn("Unsupported content exception: {}", ex.getMessage());
