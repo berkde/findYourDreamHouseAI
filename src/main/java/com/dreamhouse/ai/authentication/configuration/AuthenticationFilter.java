@@ -1,6 +1,6 @@
 package com.dreamhouse.ai.authentication.configuration;
 
-import com.dreamhouse.ai.authentication.dto.UserDTO;
+import com.dreamhouse.ai.authentication.exception.AuthenticationFailedException;
 import com.dreamhouse.ai.authentication.model.request.LoginRequestModel;
 import com.dreamhouse.ai.authentication.repository.UserRepository;
 import com.dreamhouse.ai.authentication.service.impl.UserServiceImpl;
@@ -21,6 +21,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import javax.crypto.SecretKey;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -49,6 +50,7 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request,
                                                 HttpServletResponse response) throws AuthenticationException {
+
         try {
             var credentials = new ObjectMapper()
                     .readValue(request.getInputStream(), LoginRequestModel.class);
@@ -60,11 +62,14 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
                             new ArrayList<>()
                     )
             );
-
+        } catch (IOException e) {
+            logger.error(String.format("Failed to read login request body, details: %s", e));
+            throw new AuthenticationFailedException("Failed to read login request body");
         } catch (Exception e) {
-            logger.error("Error parsing login request", e);
-            throw new RuntimeException(e);
+            logger.error(String.format("Failed to authenticate user, details: %s", e));
+            throw new AuthenticationFailedException("Failed to authenticate user");
         }
+
 
     }
 
@@ -73,58 +78,54 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
                                             HttpServletResponse response,
                                             FilterChain chain,
                                             Authentication authResult) {
-        String username = authResult.getName();
-        UserDTO userDTO = userService.getUserByUsername(username);
-
-        if (userDTO == null) {
-            logger.error("User not found: {}", username);
-            throw new RuntimeException("User not found");
-        }
-
-        var authorities = authResult.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
-
-        var user = userRepository
-                .findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-        // Always produce a token value with Bearer prefix for responses and persistence
-        String tokenWithPrefix;
-
-        if (user.getAuthorizationToken() != null && securityUtil.isTokenValid(user.getAuthorizationToken())) {
-            // Re-use existing valid token as-is (already includes Bearer prefix)
-            tokenWithPrefix = user.getAuthorizationToken();
-        } else {
-            // Create a new raw token and persist with Bearer prefix
-            String rawToken = Jwts.builder()
-                    .subject(username)
-                    .claim("authorities", authorities)
-                    .issuedAt(new Date())
-                    .expiration(new Date(System.currentTimeMillis() + TOKEN_EXPIRATION))
-                    .encryptWith(key, Jwts.ENC.A256GCM)
-                    .compact();
-            tokenWithPrefix = "Bearer " + rawToken;
-            user.setAuthorizationToken(tokenWithPrefix);
-        }
-
-        user.setLastLogin(new Date());
-        userRepository.save(user);
-
-        // Set the correct Authorization header without duplicating Bearer
-        response.addHeader("Authorization", tokenWithPrefix);
-        response.setContentType("application/json");
-        response.setStatus(HttpServletResponse.SC_OK);
-
         try {
+            String username = authResult.getName();
+
+            var user = userRepository
+                    .findByUsername(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+            var authorities = authResult.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .toList();
+
+            String tokenWithPrefix;
+
+            if (user.getAuthorizationToken() != null && securityUtil.isTokenValid(user.getAuthorizationToken())) {
+                tokenWithPrefix = user.getAuthorizationToken();
+            } else {
+                String rawToken = Jwts.builder()
+                        .subject(username)
+                        .claim("authorities", authorities)
+                        .issuedAt(new Date())
+                        .expiration(new Date(System.currentTimeMillis() + TOKEN_EXPIRATION))
+                        .encryptWith(key, Jwts.ENC.A256GCM)
+                        .compact();
+                tokenWithPrefix = "Bearer " + rawToken;
+                user.setAuthorizationToken(tokenWithPrefix);
+            }
+
+            user.setLastLogin(new Date());
+            userRepository.save(user);
+
+            response.addHeader("Authorization", tokenWithPrefix);
+            response.setContentType("application/json");
+            response.setStatus(HttpServletResponse.SC_OK);
+
+
             String responseBody = String.format(
-                "{\"message\":\"Login successful\",\"username\":\"%s\",\"token\":\"%s\"}", 
-                username, tokenWithPrefix
-            );
+                    "{\"message\":\"Login successful\",\"username\":\"%s\",\"token\":\"%s\"}",
+                    username, tokenWithPrefix
+                );
             response.getWriter().write(responseBody);
-        } catch (Exception e) {
-            logger.error("Error writing response body", e);
+        } catch (IOException e) {
+            logger.error("{}", e.getMessage());
+            throw new RuntimeException(e);
+        } catch (UsernameNotFoundException e) {
+            logger.error("User not found", e);
+            throw new AuthenticationFailedException("User authentication failed because user not found");
         }
+
 
     }
 }
