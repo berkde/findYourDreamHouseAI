@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <!-- Optional dark-mode version -->
-    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/dreamhouseai-logo.png">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/DreamHouse AI Logo Design.png">
     <!-- Light/default -->
     <img alt="DreamHouseAI" src="assets/DreamHouse%20AI%20Logo%20Design.png" width="160">
   </picture>
@@ -12,13 +12,27 @@
 
 
 
-[![Java](https://img.shields.io/badge/Java-24-007396?logo=java)](./pom.xml)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.x-6DB33F?logo=spring-boot)](./pom.xml)
-[![Build](https://img.shields.io/badge/Build-Maven-blue?logo=apache-maven)](./pom.xml)
-[![Database](https://img.shields.io/badge/DB-PostgreSQL-336791?logo=postgresql)](#)
-[![AWS](https://img.shields.io/badge/AWS-S3%20%7C%20Secrets%20Manager-FF9900?logo=amazon-aws)](#)
-[![Security](https://img.shields.io/badge/Security-JWT%20%7C%20BCrypt-green)](#)
-[![License](https://img.shields.io/badge/License-MIT-blue)](#)
+
+
+<p align="center">
+
+  <!-- Core stack -->
+<a href="./pom.xml"><img src="https://img.shields.io/badge/Java-24-007396?logo=java&logoColor=white" alt="Java"/></a>
+<a href="./pom.xml"><img src="https://img.shields.io/badge/Spring%20Boot-3.5.x-6DB33F?logo=spring-boot&logoColor=white" alt="Spring Boot"/></a>
+<a href="./pom.xml"><img src="https://img.shields.io/badge/Maven-Build-blue?logo=apache-maven&logoColor=white" alt="Maven"/></a>
+<a href="#"><img src="https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql&logoColor=white" alt="PostgreSQL"/></a>
+<a href="#"><img src="https://img.shields.io/badge/LangChain4j-AI%20Agent-0D96F6?logo=openai&logoColor=white" alt="LangChain4j"/></a>
+<a href="#"><img src="https://img.shields.io/badge/OpenAI-Embeddings-412991?logo=openai&logoColor=white" alt="OpenAI"/></a>
+<a href="#"><img src="https://img.shields.io/badge/AWS-S3%20%7C%20Secrets%20Manager%20%7C CloudWatch-FF9900?logo=amazon-aws&logoColor=white" alt="AWS"/></a>
+<a href="#"><img src="https://img.shields.io/badge/Docker-Containerization-2496ED?logo=docker&logoColor=white" alt="Docker"/></a>
+<a href="#"><img src="https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?logo=githubactions&logoColor=white" alt="GitHub Actions"/></a>
+<a href="#"><img src="https://img.shields.io/badge/Security-JWT%20%7C%20BCrypt-green?logo=keycloak&logoColor=white" alt="Security"/></a>
+<a href="#"><img src="https://img.shields.io/badge/Caffeine-Cache%20Layer-FFDD00?logo=coffeescript&logoColor=black" alt="Caffeine Cache"/></a>
+<a href="#"><img src="https://img.shields.io/badge/JUnit-Testing-25A162?logo=junit5&logoColor=white" alt="JUnit"/></a>
+<a href="#"><img src="https://img.shields.io/badge/License-MIT-blue?logo=open-source-initiative&logoColor=white" alt="License"/></a>
+
+</p>
+
 
 A modern, secure, and scalable Spring Boot 3 application for real estate management. Built with enterprise-grade security, AWS integration, and a comprehensive REST API for house advertisement management, user authentication, and messaging system.
 
