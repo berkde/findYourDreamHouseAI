@@ -29,11 +29,15 @@ public class HouseAdController {
     private static final Logger log = LoggerFactory.getLogger(HouseAdController.class);
     private final HouseAdsServiceImpl houseAdsService;
     private final StorageServiceImpl storageService;
+    private final ModelMapper modelMapper;
 
     @Autowired
-    public HouseAdController(HouseAdsServiceImpl houseAdsService, StorageServiceImpl storageService) {
+    public HouseAdController(HouseAdsServiceImpl houseAdsService,
+                             StorageServiceImpl storageService,
+                             ModelMapper modelMapper) {
         this.houseAdsService = houseAdsService;
         this.storageService = storageService;
+        this.modelMapper = modelMapper;
     }
 
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
@@ -74,7 +78,7 @@ public class HouseAdController {
 
         var dtos = ad.getImages().stream()
                 .map(img -> {
-                    var dto = new ModelMapper().map(img, HouseAdImageDTO.class);
+                    var dto = modelMapper.map(img, HouseAdImageDTO.class);
                     if (img.getStorageKey() != null && !img.getStorageKey().isBlank()) {
                         dto.setViewUrl(storageService.presignedGetUrl(img.getStorageKey(), Duration.ofMinutes(30)).orElse("undefined"));
                     }
@@ -104,13 +108,6 @@ public class HouseAdController {
         return ResponseEntity.ok().body(houseAd);
     }
 
-
-    @GetMapping("/title")
-    public ResponseEntity<List<HouseAdDTO>> getAllHouseAdsByTitle(@RequestParam String title) {
-        log.info("getAllHouseAdsByTitle - Getting house ads by title: {}", title);
-        var houseAds = houseAdsService.getAllHouseAdsByTitle(title);
-        return ResponseEntity.ok().body(houseAds);
-    }
 
 
     @GetMapping
@@ -150,7 +147,7 @@ public class HouseAdController {
     @GetMapping("/messages/{houseUid}")
     public ResponseEntity<List<HouseAdMessageDTO>> findAllByHouseAdUid(@PathVariable("houseUid") String houseAdUid) {
         log.info("findAllByHouseAdUid - Getting house ad messages by house ad uid: {}", houseAdUid);
-        var houseAdMessages = houseAdsService.findAllByHouseAdUid(houseAdUid);
+        var houseAdMessages = houseAdsService.findAllMessagesByHouseAdUid(houseAdUid);
         return ResponseEntity.ok().body(houseAdMessages);
     }
 
