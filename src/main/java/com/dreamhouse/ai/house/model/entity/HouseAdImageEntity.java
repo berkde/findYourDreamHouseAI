@@ -4,8 +4,11 @@ import jakarta.persistence.*;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.Array;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -51,6 +54,11 @@ public class HouseAdImageEntity implements Serializable {
     @Column(name = "storage_key", length = 1024)
     private String storageKey;
 
+    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Array(length = 512)
+    @Column(name = "image_embedding", columnDefinition = "vector(512)")
+    private float[] imageEmbedding;
+
     public HouseAdImageEntity() {}
 
     public Long getId() { return id; }
@@ -80,6 +88,14 @@ public class HouseAdImageEntity implements Serializable {
     public String getStorageKey() {return storageKey;}
 
     public void setStorageKey(String storageKey) {this.storageKey = storageKey;}
+
+    public float[] getImageEmbedding() {
+        return imageEmbedding;
+    }
+
+    public void setImageEmbedding(float[] imageEmbedding) {
+        this.imageEmbedding = imageEmbedding;
+    }
 
     @Override
     public boolean equals(Object o) {
