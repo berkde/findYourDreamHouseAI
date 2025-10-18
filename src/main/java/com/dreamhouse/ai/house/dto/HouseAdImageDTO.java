@@ -3,7 +3,7 @@ package com.dreamhouse.ai.house.dto;
 import java.util.Objects;
 
 public class HouseAdImageDTO {
-    private String houseAdImageID;
+    private String houseAdImageUid;
     private String imageURL;
     private String storageKey;
     private String imageName;
@@ -15,12 +15,12 @@ public class HouseAdImageDTO {
     public HouseAdImageDTO() {
     }
 
-    public String getHouseAdImageID() {
-        return houseAdImageID;
+    public String getHouseAdImageUid() {
+        return houseAdImageUid;
     }
 
-    public void setHouseAdImageID(String houseAdImageID) {
-        this.houseAdImageID = houseAdImageID;
+    public void setHouseAdImageUid(String houseAdImageUid) {
+        this.houseAdImageUid = houseAdImageUid;
     }
 
     public String getImageURL() {
@@ -82,18 +82,18 @@ public class HouseAdImageDTO {
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof HouseAdImageDTO that)) return false;
-        return Objects.equals(houseAdImageID, that.houseAdImageID);
+        return Objects.equals(houseAdImageUid, that.houseAdImageUid);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(houseAdImageID);
+        return Objects.hashCode(houseAdImageUid);
     }
 
     @Override
     public String toString() {
         final StringBuilder sb = new StringBuilder("HouseAdImageDTO{");
-        sb.append("houseAdImageID='").append(houseAdImageID).append('\'');
+        sb.append("houseAdImageID='").append(houseAdImageUid).append('\'');
         sb.append(", imageName='").append(imageName).append('\'');
         sb.append(", imageType='").append(imageType).append('\'');
         sb.append('}');
