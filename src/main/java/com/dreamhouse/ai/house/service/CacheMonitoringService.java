@@ -8,3 +8,4 @@ public interface CacheMonitoringService {
     void clearAllCaches();
     void clearCache(String cacheName);
 }
+
