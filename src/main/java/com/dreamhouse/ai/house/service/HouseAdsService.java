@@ -7,6 +7,7 @@ import com.dreamhouse.ai.house.model.request.CreateHouseAdRequestModel;
 import com.dreamhouse.ai.house.model.request.HouseAdMessageSendRequestModel;
 import com.dreamhouse.ai.house.model.request.UpdateHouseAdTitleAndDescriptionRequestModel;
 import io.micrometer.common.lang.Nullable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -24,17 +25,14 @@ public interface HouseAdsService {
     boolean removeHouseAdImageAndObjectStore(String houseAdId, String imageUid);
     Boolean deleteHouseAd(String houseAdId);
 
-    List<HouseAdDTO> getAllHouseAdsByTitle(String title);
-
     List<HouseAdDTO> getAllHouseAds();
 
     HouseAdMessageDTO sendHouseAdMessage(HouseAdMessageSendRequestModel requestModel);
     Optional<HouseAdMessageDTO> findByMessageUid(String messageUid);
-    List<HouseAdMessageDTO> findAllByHouseAdUid(String houseAdUid);
+    List<HouseAdMessageDTO> findAllMessagesByHouseAdUid(String houseAdUid);
 
-    List<HouseAdDTO> getHouseAdsWithPagination(int page, int size, String sortBy);
-    List<HouseAdDTO> searchHouseAdsWithPagination(String query, int page, int size);
-    Optional<HouseAdDTO> getHouseAdDetails(String houseAdId);
+    List<HouseAdDTO> getAllHouseAdsWithPagination(int page, int size, String sortBy, Sort.Direction direction);
+    List<HouseAdDTO> searchAllHouseAdsWithPagination(String query, int page, int size, String sortBy, Sort.Direction direction);
 
 
 }
