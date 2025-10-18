@@ -30,6 +30,7 @@ public class AwsConfiguration {
     public S3Presigner s3Presigner(AwsProperties properties) {
         return S3Presigner.builder()
                 .region(Region.of(properties.region()))
+                .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();
     }
 
