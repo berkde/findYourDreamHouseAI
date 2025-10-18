@@ -4,45 +4,57 @@ spring:
 
   threads:
     virtual:
-      enabled: true   # <-- property belongs here, not under spring.sql
+      enabled: true
 
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/postgres
     username: admin
     password: admin
-    # Use env vars (see profile files for URL/creds)
     hikari:
-      maximum-pool-size: 20          # tune per CPU/throughput
+      maximum-pool-size: 20
       minimum-idle: 5
-      connection-timeout: 30000      # 30s
-      idle-timeout: 600000           # 10m
-      max-lifetime: 1800000          # 30m (keep < PgBouncer/server timeouts)
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
       leak-detection-threshold: 60000
       validation-timeout: 5000
-      # Optional: explicit query (or rely on JDBC isValid())
-      # connection-test-query: SELECT 1
+      connection-test-query: SELECT 1
 
   jpa:
-    open-in-view: false              # avoid OSIV anti-pattern
+    open-in-view: false
     show-sql: false
     properties:
       hibernate:
-
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         jdbc:
-          batch_size: 100            # larger batches for insert/update bursts
+          batch_size: 100
         order_inserts: true
         order_updates: true
-        # Recommended in prod for stability:
-        # temp.use_jdbc_metadata_defaults: false
+        boot:
+          allow_jdbc_metadata_access: false
     generate-ddl: true
 
   cache:
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=10m
     cache-names: users,userProfiles,houseAds,houseAdsList,houseAdsSearch,houseAdDetails,secrets,roles,authorities
+
+  ai:
+    openai:
+      base-url: http://localhost:11434/v1
+      api-key: dummy           # non-empty string required by Spring AI
+      chat:
+        options:
+          model: qwen2p5-vl-72b
+          temperature: 0.2
+      http:
+        connect-timeout: 5s
+        read-timeout: 60s
+      retry:
+        max-attempts: 2
+        backoff: 500ms
 
 management:
   endpoints:
@@ -61,6 +73,8 @@ management:
         step: 1m
         batchSize: 20
         enabled: true
+        region: us-east-2
+
 server:
   shutdown: graceful
   compression:
@@ -70,12 +84,7 @@ logging:
   level:
     org.hibernate.SQL: INFO
     org.hibernate.type.descriptor.sql.BasicBinder: WARN
-    io:
-      micrometer:
-        cloudwatch2: DEBUG
-        core:
-          instrument:
-            push: DEBUG
+    io.micrometer.cloudwatch2: DEBUG
     com.dreamhouse.ai: INFO
     org.springframework.security: INFO
     org.springframework.web: INFO
@@ -92,3 +101,14 @@ aws:
 security:
   jwt:
     secret-id: dev/dreamai/backend
+
+# 🧠 LangChain4j Configuration (used by AiConfiguration + LLMProperties)
+langchain4j:
+  open-ai:
+    # Switch between Ollama or vLLM by changing the port here:
+    # For vLLM (Docker):  http://localhost:8000/v1
+    # For Ollama (Mac):   http://localhost:11434/v1
+    base-url: http://localhost:11434/v1
+    api-key: dummy
+    model: qwen2p5-vl-72b
+    temperature: 0.2
