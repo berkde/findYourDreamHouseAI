@@ -12,9 +12,13 @@ import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 @Service
 public class SecretsServiceImpl implements SecretsService {
     private final SecretsManagerClient secretsManagerClient;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
 
-    public SecretsServiceImpl(SecretsManagerClient sm) { this.secretsManagerClient = sm; }
+    public SecretsServiceImpl(SecretsManagerClient sm,
+                              ObjectMapper mapper) {
+        this.secretsManagerClient = sm;
+        this.mapper = mapper;
+    }
 
     @Cacheable(cacheNames = "secrets", key = "'raw:' + #secretId")
     public String getSecretRaw(String secretId) {
