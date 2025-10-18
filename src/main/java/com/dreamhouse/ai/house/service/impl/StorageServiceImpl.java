@@ -1,7 +1,7 @@
 package com.dreamhouse.ai.house.service.impl;
 
 import com.dreamhouse.ai.house.exception.CloudException;
-import com.dreamhouse.ai.house.model.response.StoragePutResult;
+import com.dreamhouse.ai.house.model.response.StoragePutResponse;
 import com.dreamhouse.ai.house.service.SecretsService;
 import com.dreamhouse.ai.house.service.StorageService;
 import org.slf4j.Logger;
@@ -16,6 +16,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Utilities;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -46,6 +47,7 @@ public class StorageServiceImpl implements StorageService {
         this.secretId = secretId;
     }
 
+    @Transactional
     @Override
     public Optional<String> presignedGetUrl(String key, Duration expiry) {
         try {
@@ -77,11 +79,17 @@ public class StorageServiceImpl implements StorageService {
 
     @Transactional
     @Override
-    public Optional<StoragePutResult> putObject(String key, byte[] bytes, String contentType) {
+    public Optional<StoragePutResponse> putObject(String key, byte[] bytes, String contentType) {
         try {
             var basePath = secretsService.getSecret(secretId, "basePath").replace("\"", "");
             var bucket = secretsService.getSecret(secretId, "bucket_name").replace("\"", "");
+
+            log.info("basePath: {}", basePath);
+            log.info("bucket: {}", bucket);
+
             String objectKey = (basePath.isEmpty() ? "" : basePath) + key;
+            log.info("object key: {}", objectKey);
+
 
             PutObjectRequest req = PutObjectRequest.builder()
                     .bucket(bucket)
@@ -93,7 +101,9 @@ public class StorageServiceImpl implements StorageService {
             var resp = s3Client.putObject(req, RequestBody.fromBytes(bytes));
             URL url = s3Utilities.getUrl(b -> b.bucket(bucket).key(objectKey));
 
-            return Optional.of(new StoragePutResult(objectKey, resp.eTag(), url.toString()));
+            log.info("url: {}", url);
+
+            return Optional.of(new StoragePutResponse(objectKey, resp.eTag(), url.toString()));
         } catch (AwsServiceException e) {
             throw new CloudException(e.getMessage());
         } catch (SdkClientException e) {
@@ -116,10 +126,15 @@ public class StorageServiceImpl implements StorageService {
                     .build();
 
             s3Client.deleteObject(deleteObjectRequest);
+        } catch (NoSuchKeyException e) {
+            log.warn("deleteObject - Object does not exist: {}", key, e);
+            throw new CloudException("Object does not exist: " + key);
         } catch (AwsServiceException e) {
-            throw new CloudException(e.getMessage());
+            log.error("deleteObject - Error deleting object: {}", key, e);
+            throw new CloudException("Aws service exception: " + e.getMessage());
         } catch (SdkClientException e) {
             log.error("deleteObject - Error deleting object: {}", key, e);
+            throw new CloudException("Sdk client exception :" + e.getMessage());
         }
     }
 }
