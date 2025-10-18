@@ -8,10 +8,11 @@ import com.dreamhouse.ai.house.exception.*;
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
 import com.dreamhouse.ai.house.model.entity.HouseAdImageEntity;
 import com.dreamhouse.ai.house.model.entity.HouseAdMessageEntity;
+import com.dreamhouse.ai.house.model.event.ImageDeleteEvent;
 import com.dreamhouse.ai.house.model.request.CreateHouseAdRequestModel;
 import com.dreamhouse.ai.house.model.request.HouseAdMessageSendRequestModel;
 import com.dreamhouse.ai.house.model.request.UpdateHouseAdTitleAndDescriptionRequestModel;
-import com.dreamhouse.ai.house.model.response.StoragePutResult;
+import com.dreamhouse.ai.house.model.response.StoragePutResponse;
 import com.dreamhouse.ai.house.repository.HouseAdMessageRepository;
 import com.dreamhouse.ai.house.repository.HouseAdRepository;
 import com.dreamhouse.ai.house.service.HouseAdsService;
@@ -24,9 +25,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -42,25 +49,27 @@ public class HouseAdsServiceImpl implements HouseAdsService {
     private final ModelMapper modelMapper;
     private final static Logger log = LoggerFactory.getLogger(HouseAdsServiceImpl.class);
     private final HouseAdMessageRepository houseAdMessageRepository;
+    private final ApplicationEventPublisher publisher;
 
     @Autowired
     public HouseAdsServiceImpl(HouseAdRepository houseAdRepository,
                                UserRepository userRepository,
                                StorageService storageService,
                                ModelMapper modelMapper,
-                               HouseAdMessageRepository houseAdMessageRepository) {
+                               HouseAdMessageRepository houseAdMessageRepository,
+                               ApplicationEventPublisher publisher) {
         this.houseAdRepository = houseAdRepository;
         this.userRepository = userRepository;
         this.storageService = storageService;
         this.modelMapper = modelMapper;
         this.houseAdMessageRepository = houseAdMessageRepository;
+        this.publisher = publisher;
     }
 
     @Transactional
     @CacheEvict(value = {"houseAdsList", "houseAdsSearch"}, allEntries = true)
     @Override
     public HouseAdDTO createHouseAd(CreateHouseAdRequestModel createHouseAdRequestModel) {
-        try {
             log.info("Creating house ad with title: {}", createHouseAdRequestModel.title());
 
             var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -68,8 +77,6 @@ public class HouseAdsServiceImpl implements HouseAdsService {
 
             var user = userRepository.findByUsername(username)
                     .orElseThrow(() -> new UsernameNotFoundException("Authenticated user not found: " + username));
-
-
 
             HouseAdEntity houseAd = new HouseAdEntity();
             houseAd.setHouseAdUid(UUID.randomUUID().toString());
@@ -95,34 +102,31 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                         });
             }
 
-
+        try {
             var savedHouseAd = houseAdRepository.save(houseAd);
-
             return modelMapper.map(savedHouseAd, HouseAdDTO.class);
         } catch (Exception e) {
-            log.error("createHouseAd - Error creating house ad: {}", createHouseAdRequestModel.title(), e);
-            throw new HouseAdCreationException("Error creating house ad: " + e.getMessage() + " " + createHouseAdRequestModel.title());
+            log.error("createHouseAd - Error saving house ad: {}", createHouseAdRequestModel.title(), e);
+            throw new HouseAdCreationException("Error saving house ad: " + e.getMessage() + " " + createHouseAdRequestModel.title());
         }
     }
 
     @Override
     @Cacheable(value = "houseAds", key = "#houseAdId")
     public HouseAdDTO getHouseAdByHouseId(String houseAdId) {
-        try {
-            return houseAdRepository.findByHouseAdUid(houseAdId)
-                    .map(houseAdEntity -> new ModelMapper().map(houseAdEntity, HouseAdDTO.class))
-                    .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdId));
-        } catch (HouseAdNotFoundException e) {
-            log.error("getHouseAdByHouseId - Error getting house ad by id: {}", houseAdId, e);
-            throw new HouseAdNotFoundException("House ad not found: " + houseAdId);
-        }
+        return houseAdRepository
+                .findByHouseAdUid(houseAdId)
+                .map(houseAdEntity -> modelMapper.map(houseAdEntity, HouseAdDTO.class))
+                .orElseThrow(() -> {
+                    log.error("getHouseAdByHouseId - Error getting house ad by id: {}", houseAdId);
+                    return new HouseAdNotFoundException("House ad not found: " + houseAdId);
+                });
     }
 
     @Transactional
     @CacheEvict(value = {"houseAds", "houseAdsList", "houseAdsSearch"}, key = "#updateHouseAdRequestModel.houseAdId()", allEntries = true)
     @Override
     public HouseAdDTO updateHouseAdTitleAndDescription(UpdateHouseAdTitleAndDescriptionRequestModel updateHouseAdRequestModel) {
-        try {
             var house = houseAdRepository
                     .findByHouseAdUid(updateHouseAdRequestModel.houseAdId())
                     .orElseThrow(() ->
@@ -138,8 +142,8 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                 house.setDescription(updateHouseAdRequestModel.description());
             }
 
+        try {
             var savedHouseAdEntity = houseAdRepository.save(house);
-
             return modelMapper.map(savedHouseAdEntity, HouseAdDTO.class);
         } catch (HouseAdNotFoundException e) {
             log.error("updateHouseAdTitleAndDescription - Error updating house ad title and description: {}", updateHouseAdRequestModel.houseAdId(), e);
@@ -147,6 +151,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         }
     }
 
+    @CacheEvict(cacheNames = {"houseAds","houseAdsList","houseAdsSearch"}, allEntries = true)
     @Transactional
     @Override
     public List<HouseAdImageDTO> addHouseAdImages(String houseAdId,
@@ -156,7 +161,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
             throw new NoFilesException("No files provided");
 
         var ad = houseAdRepository.findByHouseAdUid(houseAdId)
-                .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdId));
+                    .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdId));
 
         List<HouseAdImageEntity> entities = new ArrayList<>();
         for (int i = 0; i < files.size(); i++) {
@@ -173,49 +178,53 @@ public class HouseAdsServiceImpl implements HouseAdsService {
 
             var objectKey = "house-ads/%s/%s%s".formatted(
                     houseAdId, UUID.randomUUID(), safeExtractFileName(file.getOriginalFilename()));
-            StoragePutResult put = storageService
+            StoragePutResponse put = storageService
                     .putObject(objectKey, file.getBytes(), content)
                     .orElseThrow();
 
-            String thumbUrl = put.thumbnailUrl() != null ? put.thumbnailUrl() : put.url();
+                String thumbUrl = put.thumbnailUrl() != null ? put.thumbnailUrl() : put.url();
 
-            var img = new HouseAdImageEntity();
-            img.setHouseAdImageUid(UUID.randomUUID().toString());
-            img.setImageName(Optional.ofNullable(file.getOriginalFilename()).orElse("image"));
-            img.setImageUrl(put.url());
-            img.setImageType(content);
-            img.setImageThumbnail(thumbUrl);
-            img.setImageDescription(captions != null && i < captions.size() ? captions.get(i) : null);
-            img.setStorageKey(put.key());
-            ad.addImage(img);
-            entities.add(img);
+                var img = new HouseAdImageEntity();
+                img.setHouseAdImageUid(UUID.randomUUID().toString());
+                img.setImageName(Optional.ofNullable(file.getOriginalFilename()).orElse("image"));
+                img.setImageUrl(put.url());
+                img.setImageType(content);
+                img.setImageThumbnail(thumbUrl);
+                img.setImageDescription(captions != null && i < captions.size() ? captions.get(i) : null);
+                img.setStorageKey(put.key());
+                ad.addImage(img);
+                entities.add(img);
         }
 
         houseAdRepository.save(ad);
         return entities
-                .stream()
-                .map(e -> modelMapper.map(e, HouseAdImageDTO.class))
-                .toList();
+                    .stream()
+                    .map(e -> modelMapper.map(e, HouseAdImageDTO.class))
+                    .toList();
     }
 
+    @CacheEvict(cacheNames = {"houseAds","houseAdsList","houseAdsSearch"}, allEntries = true)
     @Transactional
     @Override
     public boolean removeHouseAdImageAndObjectStore(String houseAdId, String imageUid) {
+        var houseAd = houseAdRepository
+                .findByHouseAdUid(houseAdId)
+                .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdId));
+
+        var img = houseAd.getImages().stream()
+                    .filter(image -> imageUid.equals(image.getHouseAdImageUid()))
+                    .findFirst()
+                    .orElse(null);
+
+        if (img == null) throw new HouseAdImageNotFoundException("House ad image not found: " + imageUid);
+
+        if (img.getStorageKey() != null && !img.getStorageKey().isBlank()) {
+            storageService.deleteObject(img.getStorageKey());
+        }
+
         try {
-            var ad = houseAdRepository.findByHouseAdUid(houseAdId)
-                    .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdId));
-
-            var img = ad.getImages().stream()
-                    .filter(i -> imageUid.equals(i.getHouseAdImageUid()))
-                    .findFirst().orElse(null);
-            if (img == null) return false;
-
-            if (img.getStorageKey() != null && !img.getStorageKey().isBlank()) {
-                storageService.deleteObject(img.getStorageKey());
-            }
-
-            ad.removeImage(img);
-            houseAdRepository.save(ad);
+            houseAd.removeImage(img);
+            houseAdRepository.save(houseAd);
             return Boolean.TRUE;
         } catch (HouseAdImageNotFoundException e) {
             log.error("removeHouseAdImageAndObjectStore - Error removing house ad image and object store: {}", imageUid, e);
@@ -229,23 +238,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         return dot > -1 ? name.substring(dot) : "";
     }
 
-    @Override
-    @Cacheable(value = "houseAdsSearch", key = "#title")
-    public List<HouseAdDTO> getAllHouseAdsByTitle(String title) {
-        try {
-            if (title == null || title.isBlank()) return List.of();
-            log.info("Searching house ads by title: {}", title);
-            return houseAdRepository.findAllByTitleContainingIgnoreCase(title)
-                    .stream()
-                    .map(houseAdEntity -> modelMapper.map(houseAdEntity, HouseAdDTO.class))
-                    .toList();
-        } catch (Exception e) {
-            log.error("getAllHouseAdsByTitle - Error searching house ads by title: {}", title, e);
-            return List.of();
-        }
-    }
 
-    
     @Override
     @Cacheable(value = "houseAdsList", key = "'all'")
     public List<HouseAdDTO> getAllHouseAds() {
@@ -257,30 +250,40 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                     .toList();
         } catch (Exception e) {
             log.error("getAllHouseAds - Error searching all house ads: {}", e.getMessage(), e);
-            return List.of();
+            throw new HouseAdNotFoundException("Error fetching house ads: " + e.getMessage());
         }
     }
 
     @Override
     @CacheEvict(value = {"houseAds", "houseAdsList", "houseAdsSearch"}, allEntries = true)
+    @Transactional
     public Boolean deleteHouseAd(String houseAdId) {
+        log.info("Deleting house ad with id: {}", houseAdId);
+        var houseAdEntity = houseAdRepository
+                    .findByHouseAdUid(houseAdId)
+                    .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdId));
+
+        houseAdEntity.getImages()
+                    .forEach(image ->
+                            publisher.publishEvent(new ImageDeleteEvent(image.getStorageKey())));
+
         try {
-            log.info("Deleting house ad with id: {}", houseAdId);
-            var houseAdEntity = houseAdRepository.findByHouseAdUid(houseAdId).orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdId));
             houseAdRepository.delete(houseAdEntity);
+
             return Boolean.TRUE;
         } catch (Exception e) {
             log.error("deleteHouseAd - Error deleting house ad: {}", houseAdId, e);
-            return Boolean.FALSE;
+            throw new HouseAdDeleteException(e.getMessage());
         }
     }
 
     @Transactional
     @Override
     public HouseAdMessageDTO sendHouseAdMessage(HouseAdMessageSendRequestModel requestModel) {
-        try {
-            var receiverHouseAd = houseAdRepository.findByHouseAdUid(requestModel.getReceiverHouseAdUid())
-                    .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + requestModel.getReceiverHouseAdUid()));
+            var receiverHouseAd = houseAdRepository
+                    .findByHouseAdUid(requestModel.getReceiverHouseAdUid())
+                    .orElseThrow(() ->
+                            new HouseAdNotFoundException("House ad not found: " + requestModel.getReceiverHouseAdUid()));
 
             var message = new HouseAdMessageEntity();
             message.setMessageUid(UUID.randomUUID().toString());
@@ -293,6 +296,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
             message.setHouseAd(receiverHouseAd);
             receiverHouseAd.addMessage(message);
 
+        try {
             var savedMessage = houseAdMessageRepository.save(message);
             houseAdRepository.save(receiverHouseAd);
 
@@ -305,41 +309,59 @@ public class HouseAdsServiceImpl implements HouseAdsService {
 
     @Override
     public Optional<HouseAdMessageDTO> findByMessageUid(String messageUid) {
-        try {
-            var message = houseAdMessageRepository.findByMessageUid(messageUid)
-                    .map(houseAdMessageEntity -> modelMapper.map(houseAdMessageEntity, HouseAdMessageDTO.class))
-                    .orElseThrow(() -> new HouseAdMessageException("House ad message not found: " + messageUid));
-            return Optional.of(message);
-        } catch (Exception e) {
-            log.error("findByMessageUid - Error finding house ad message by uid: {}", messageUid, e);
-            return Optional.empty();
-        }
+        var message = houseAdMessageRepository
+                .findByMessageUid(messageUid)
+                .map(houseAdMessageEntity ->
+                        modelMapper.map(houseAdMessageEntity, HouseAdMessageDTO.class))
+                .orElseThrow(() -> {
+                    log.error("findByMessageUid - Error finding house ad message by uid: {}", messageUid);
+                    return new HouseAdMessageException("House ad message not found: " + messageUid);
+                });
+        return Optional.of(message);
     }
 
     @Override
-    public List<HouseAdMessageDTO> findAllByHouseAdUid(String houseAdUid) {
+    public List<HouseAdMessageDTO> findAllMessagesByHouseAdUid(String houseAdUid) {
+        var houseAd = houseAdRepository
+                .findByHouseAdUid(houseAdUid)
+                .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdUid));
+
         try {
-            var houseAd = houseAdRepository.findByHouseAdUid(houseAdUid).orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdUid));
             return houseAd.getMessages()
                     .stream()
-                    .map(houseAdMessageEntity -> modelMapper.map(houseAdMessageEntity, HouseAdMessageDTO.class))
+                    .map(houseAdMessageEntity ->
+                            modelMapper.map(houseAdMessageEntity, HouseAdMessageDTO.class))
                     .toList();
         } catch (Exception e) {
             log.error("findAllByHouseAd - Error finding all house ad messages by house ad uid: {}", houseAdUid, e);
             return List.of();
         }
     }
-    
 
-    @Cacheable(value = "houseAdsList", key = "#page + '_' + #size + '_' + #sortBy")
+
+    @Transactional
+    @Cacheable(
+            value = "houseAdsList",
+            key = "'houseAdsList:' + #page + ':' + #size + ':' + #sortBy + ':' + #direction.name()"
+    )
     @Override
-    public List<HouseAdDTO> getHouseAdsWithPagination(int page, int size, String sortBy) {
-        log.info("Getting house ads with pagination - page: {}, size: {}, sortBy: {}", page, size, sortBy);
-        
+    public List<HouseAdDTO> getAllHouseAdsWithPagination(int page, int size, String sortBy, Sort.Direction direction) {
+        log.info("Getting house ads with pagination - page: {}, size: {}, sortBy: {}, dir: {}",
+                page, size, sortBy, direction);
+
+        int p = Math.max(0, page);
+        int s = Math.min(Math.max(1, size), 200);
+
+        Set<String> allowed = Set.of("price", "beds", "baths", "sqft", "yearBuilt", "title", "createdAt", "updatedAt");
+        String sortProperty = allowed.contains(sortBy) ? sortBy : "createdAt";
+
+        Pageable pageable = PageRequest.of(p, s, Sort.by(direction == null ? Sort.Direction.ASC : direction, sortProperty));
+
         try {
-            var houseAds = houseAdRepository.findAll();
-            return houseAds.stream()
-                    .map(houseAd -> modelMapper.map(houseAd, HouseAdDTO.class))
+            var pageResult = houseAdRepository.findAll(pageable);
+            return pageResult.getContent()
+                    .stream()
+                    .map(h -> modelMapper.map(h, HouseAdDTO.class))
                     .toList();
         } catch (Exception e) {
             log.error("Error getting house ads with pagination", e);
@@ -347,34 +369,44 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         }
     }
 
-    @Cacheable(value = "houseAdsSearch", key = "#query + '_' + #page + '_' + #size")
+
+    @Transactional
+    @Cacheable(
+            value = "houseAdsSearch",
+            key = "'q:' + T(org.springframework.util.StringUtils).trimAllWhitespace(#query == null ? '' : #query.toLowerCase())"
+                    + " + ':p:' + #page + ':s:' + #size + ':sb:' + #sortBy + ':dir:' + #direction.name()",
+            unless = "#result == null || #result.isEmpty()"
+    )
     @Override
-    public List<HouseAdDTO> searchHouseAdsWithPagination(String query, int page, int size) {
-        log.info("Searching house ads with query: {}, page: {}, size: {}", query, page, size);
-        
-        try {
-            var houseAds = houseAdRepository.findAllByTitleContainingIgnoreCase(query);
-            return houseAds.stream()
-                    .map(houseAd -> modelMapper.map(houseAd, HouseAdDTO.class))
-                    .toList();
-        } catch (Exception e) {
-            log.error("Error searching house ads", e);
-            return Collections.emptyList();
+    public List<HouseAdDTO> searchAllHouseAdsWithPagination(
+            String query,
+            int page,
+            int size,
+            String sortBy,
+            Sort.Direction direction
+    ) {
+        String q = (query == null) ? "" : query.trim();
+        if (!StringUtils.hasText(q)) {
+            return List.of();
         }
+
+        int p = Math.max(0, page);
+        int s = Math.min(Math.max(1, size), 200);
+
+        Set<String> allowed = Set.of("price", "beds", "baths", "sqft", "yearBuilt", "title", "createdAt", "updatedAt");
+        String sortProperty = allowed.contains(sortBy) ? sortBy : "createdAt";
+        Sort.Direction dir = (direction == null) ? Sort.Direction.DESC : direction;
+
+        Pageable pageable = PageRequest.of(p, s, Sort.by(dir, sortProperty));
+
+        Page<HouseAdEntity> pageResult =
+                houseAdRepository.searchTitleOrDescription(q, pageable);
+
+        return pageResult.getContent()
+                .stream()
+                .map(h -> modelMapper.map(h, HouseAdDTO.class))
+                .toList();
     }
 
-    @Cacheable(value = "houseAdDetails", key = "#houseAdId")
-    @Override
-    public Optional<HouseAdDTO> getHouseAdDetails(String houseAdId) {
-        log.info("Getting house ad details for ID: {}", houseAdId);
-        
-        try {
-            var houseAd = houseAdRepository.findByHouseAdUid(houseAdId);
-            return houseAd.map(ad -> modelMapper.map(ad, HouseAdDTO.class));
-        } catch (Exception e) {
-            log.error("Error getting house ad details for ID: {}", houseAdId, e);
-            return Optional.empty();
-        }
-    }
 
 }
