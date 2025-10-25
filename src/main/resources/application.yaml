@@ -8,53 +8,58 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: admin
-    password: admin
+    url: ${POSTGRESQL_URL}
+    username: ${POSTGRESQL_USERNAME}
+    password: ${POSTGRESQL_PASSWORD}
     hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
+      initialization-fail-timeout: 0
+      connection-init-sql: SET application_name='FindYourDreamHouseAI'
+      maximum-pool-size: 10
+      minimum-idle: 2
       connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+      idle-timeout: 300000
+      max-lifetime: 900000
       leak-detection-threshold: 60000
-      validation-timeout: 5000
+      validation-timeout: 2000
       connection-test-query: SELECT 1
+      data-source-properties:
+        cachePrepStmts: true
+        prepStmtCacheSize: 250
+        prepStmtCacheSqlLimit: 2048
+        useServerPrepStmts: true
+      auto-commit: true
+      allow-pool-suspension: true
+      pool-name: HikariPool-FindYourDreamHouseAI
 
   jpa:
     open-in-view: false
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         jdbc:
-          batch_size: 100
+          batch_size: 50
         order_inserts: true
         order_updates: true
         boot:
           allow_jdbc_metadata_access: false
+        enable_lazy_load_no_trans: false
+        query:
+          in_clause_parameter_padding: true
     generate-ddl: true
+    database: postgresql
+    hibernate:
+      ddl-auto: update
 
   cache:
     caffeine:
-      spec: maximumSize=1000,expireAfterWrite=10m
+      spec: maximumSize=500,expireAfterWrite=5m
     cache-names: users,userProfiles,houseAds,houseAdsList,houseAdsSearch,houseAdDetails,secrets,roles,authorities
-
-  ai:
-    openai:
-      base-url: http://localhost:11434/v1
-      api-key: dummy           # non-empty string required by Spring AI
-      chat:
-        options:
-          model: qwen2p5-vl-72b
-          temperature: 0.2
-      http:
-        connect-timeout: 5s
-        read-timeout: 60s
-      retry:
-        max-attempts: 2
-        backoff: 500ms
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
 management:
   endpoints:
@@ -69,16 +74,18 @@ management:
   metrics:
     export:
       cloudwatch:
-        namespace: "DreamHouseAI/Prod"
+        namespace: ${CLOUDWATCH_NAMESPACE}
         step: 1m
         batchSize: 20
         enabled: true
-        region: us-east-2
+        region: ${AWS_REGION}
 
 server:
   shutdown: graceful
   compression:
     enabled: true
+  tomcat:
+    connection-timeout: 120000
 
 logging:
   level:
@@ -88,27 +95,43 @@ logging:
     com.dreamhouse.ai: INFO
     org.springframework.security: INFO
     org.springframework.web: INFO
+    dev.langchain4j: DEBUG
+    com.zaxxer.hikari: DEBUG
   file:
-    name: logs/application.log
+    name: ${LOGS_FILE_LOCATION}
   logback:
     rollingpolicy:
       max-file-size: 100MB
       max-history: 30
 
 aws:
-  region: us-east-2
+  region: ${AWS_REGION}
 
 security:
   jwt:
-    secret-id: dev/dreamai/backend
+    secret-id: ${S3_SECRET_KEY}
 
-# 🧠 LangChain4j Configuration (used by AiConfiguration + LLMProperties)
-langchain4j:
-  open-ai:
-    # Switch between Ollama or vLLM by changing the port here:
-    # For vLLM (Docker):  http://localhost:8000/v1
-    # For Ollama (Mac):   http://localhost:11434/v1
-    base-url: http://localhost:11434/v1
-    api-key: dummy
-    model: qwen2p5-vl-72b
-    temperature: 0.2
+llm:
+  base-url: ${LLM_URL}
+  native-base-url: ${LLM_NATIVE_BASE_URL}
+  api-key: ${AI_API_KEY}
+  model: ${LLM_MODEL}
+  temperature: ${LLM_TEMPERATURE}
+  embedding-model-name: ${LLM_EMBEDDING_MODEL}
+
+sonar:
+  projectKey: FindYourDreamHouseAI
+  projectName: FindYourDreamHouseAI
+  login: ${SONAR_LOGIN_KEY}
+  host:
+     url: ${SONAR_HOST_URL}
+  java:
+     source: 21
+
+  junit:
+     reportPaths: target/surefire-reports
+  jacoco:
+     reportPaths:
+  coverage:
+     jacoco:
+        xmlReportPaths: target/site/jacoco/jacoco.xml
