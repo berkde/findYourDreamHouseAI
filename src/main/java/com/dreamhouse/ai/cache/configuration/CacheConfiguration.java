@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.house.configuration;
+package com.dreamhouse.ai.cache.configuration;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;

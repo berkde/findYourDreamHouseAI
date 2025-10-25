@@ -1,6 +1,6 @@
-package com.dreamhouse.ai.house.service.impl;
+package com.dreamhouse.ai.cache.service.impl;
 
-import com.dreamhouse.ai.house.service.CacheMonitoringService;
+import com.dreamhouse.ai.cache.service.CacheMonitoringService;
 import com.github.benmanes.caffeine.cache.stats.CacheStats;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

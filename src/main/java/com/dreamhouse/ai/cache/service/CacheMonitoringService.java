@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.house.service;
+package com.dreamhouse.ai.cache.service;
 
 import java.util.Map;
 
