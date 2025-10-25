@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.house.exception;
+package com.dreamhouse.ai.cloud.exception;
 
 public class EmptyFileException extends RuntimeException {
   public EmptyFileException(String message) {

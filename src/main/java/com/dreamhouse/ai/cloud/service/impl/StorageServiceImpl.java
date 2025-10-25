@@ -1,9 +1,9 @@
-package com.dreamhouse.ai.house.service.impl;
+package com.dreamhouse.ai.cloud.service.impl;
 
-import com.dreamhouse.ai.house.exception.CloudException;
-import com.dreamhouse.ai.house.model.response.StoragePutResponse;
-import com.dreamhouse.ai.house.service.SecretsService;
-import com.dreamhouse.ai.house.service.StorageService;
+import com.dreamhouse.ai.cloud.exception.CloudException;
+import com.dreamhouse.ai.cloud.model.StoragePutResponse;
+import com.dreamhouse.ai.cloud.service.SecretsService;
+import com.dreamhouse.ai.cloud.service.StorageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -64,8 +64,8 @@ public class StorageServiceImpl implements StorageService {
             GetObjectRequest getReq = GetObjectRequest.builder()
                     .bucket(bucket)
                     .key(key)
-                    // .responseContentType("image/jpeg")      // optional: force headers
-                    // .responseContentDisposition("inline")    // optional: ensure inline display
+                     .responseContentType("image/jpeg")      // optional: force headers
+                     .responseContentDisposition("inline")    // optional: ensure inline display
                     .build();
 
             log.info("presignedGetUrl getReq = {}", getReq);

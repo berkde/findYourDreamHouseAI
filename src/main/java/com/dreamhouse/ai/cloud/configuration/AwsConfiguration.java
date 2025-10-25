@@ -1,5 +1,7 @@
-package com.dreamhouse.ai.house.configuration;
+package com.dreamhouse.ai.cloud.configuration;
 
+import com.amazonaws.secretsmanager.caching.SecretCache;
+import com.amazonaws.secretsmanager.caching.SecretCacheConfiguration;
 import io.micrometer.cloudwatch2.CloudWatchConfig;
 import io.micrometer.cloudwatch2.CloudWatchMeterRegistry;
 import io.micrometer.core.instrument.Clock;
@@ -13,6 +15,8 @@ import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
+
+import java.time.Duration;
 
 @Configuration
 @EnableConfigurationProperties(AwsProperties.class)
@@ -45,28 +49,37 @@ public class AwsConfiguration {
     }
 
     @Bean
-    public CloudWatchConfig cloudWatchConfig(Environment env) {
-        return key -> {
-            String k = key.startsWith(CLOUD_WATCH_KEY_PREFIX) ? key.substring(CLOUD_WATCH_KEY_PREFIX.length()) : key;
-            return env.getProperty(CLOUD_WATCH_ENV_PROPERTY + k);
-        };
+    public SecretCache cache(SecretsManagerClient secretsManagerClient) {
+        SecretCacheConfiguration configuration = new SecretCacheConfiguration();
+        configuration.setClient(secretsManagerClient);
+        configuration.setCacheItemTTL(Duration.ofDays(1).getSeconds());
+        configuration.setMaxCacheSize(1024 * 1024);
+        return new SecretCache(configuration);
     }
 
-    @Bean
-    public CloudWatchAsyncClient cloudWatchAsyncClient(AwsProperties properties) {
-        return CloudWatchAsyncClient.builder()
-                .region(Region.of(properties.region()))
-                .credentialsProvider(DefaultCredentialsProvider.create())
-                .build();
-    }
+//    @Bean
+//    public CloudWatchConfig cloudWatchConfig(Environment env) {
+//        return key -> {
+//            String k = key.startsWith(CLOUD_WATCH_KEY_PREFIX) ? key.substring(CLOUD_WATCH_KEY_PREFIX.length()) : key;
+//            return env.getProperty(CLOUD_WATCH_ENV_PROPERTY + k);
+//        };
+//    }
+//
+//    @Bean
+//    public CloudWatchAsyncClient cloudWatchAsyncClient(AwsProperties properties) {
+//        return CloudWatchAsyncClient.builder()
+//                .region(Region.of(properties.region()))
+//                .credentialsProvider(DefaultCredentialsProvider.create())
+//                .build();
+//    }
 
-    @Bean
-    public Clock micrometerClock() { return Clock.SYSTEM; }
+//    @Bean
+//    public Clock micrometerClock() { return Clock.SYSTEM; }
 
-    @Bean
-    public CloudWatchMeterRegistry cloudWatchMeterRegistry(
-            CloudWatchConfig config, Clock clock, CloudWatchAsyncClient client) {
-        return new CloudWatchMeterRegistry(config, clock, client);
-    }
+//    @Bean
+//    public CloudWatchMeterRegistry cloudWatchMeterRegistry(
+//            CloudWatchConfig config, Clock clock, CloudWatchAsyncClient client) {
+//        return new CloudWatchMeterRegistry(config, clock, client);
+//    }
 
 }

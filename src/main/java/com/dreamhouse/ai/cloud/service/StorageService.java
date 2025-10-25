@@ -1,6 +1,6 @@
-package com.dreamhouse.ai.house.service;
+package com.dreamhouse.ai.cloud.service;
 
-import com.dreamhouse.ai.house.model.response.StoragePutResponse;
+import com.dreamhouse.ai.cloud.model.StoragePutResponse;
 
 import java.time.Duration;
 import java.util.Optional;

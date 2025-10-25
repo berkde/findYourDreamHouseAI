@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.house.exception;
+package com.dreamhouse.ai.cloud.exception;
 
 import com.fasterxml.jackson.core.JsonParseException;
 

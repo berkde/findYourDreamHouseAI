@@ -1,9 +1,9 @@
-package com.dreamhouse.ai.house.service.impl;
+package com.dreamhouse.ai.cloud.service.impl;
 
-import com.dreamhouse.ai.house.exception.NoSecretKeyFoundException;
-import com.dreamhouse.ai.house.exception.SecretFormatException;
-import com.dreamhouse.ai.house.exception.SecretParsingException;
-import com.dreamhouse.ai.house.service.SecretsService;
+import com.dreamhouse.ai.cloud.service.SecretsService;
+import com.dreamhouse.ai.cloud.exception.NoSecretKeyFoundException;
+import com.dreamhouse.ai.cloud.exception.SecretFormatException;
+import com.dreamhouse.ai.cloud.exception.SecretParsingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;

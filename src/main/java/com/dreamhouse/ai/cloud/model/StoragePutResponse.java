@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.house.model.response;
+package com.dreamhouse.ai.cloud.model;
 
 import io.micrometer.common.lang.Nullable;
 

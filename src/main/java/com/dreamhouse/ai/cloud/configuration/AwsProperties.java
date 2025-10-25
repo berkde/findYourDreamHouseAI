@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.house.configuration;
+package com.dreamhouse.ai.cloud.configuration;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
