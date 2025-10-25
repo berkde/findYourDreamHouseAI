@@ -6,10 +6,8 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Index;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.Array;
+import org.hibernate.annotations.*;
 import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
-import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.io.Serial;
@@ -78,7 +76,10 @@ public class HouseAdEntity implements Serializable {
             orphanRemoval = true,
             fetch = FetchType.LAZY
     )
-    private Set<HouseAdImageEntity> images = new LinkedHashSet<>();
+    @BatchSize(size = 50)
+    private Set<HouseAdImageEntity> images = new HashSet<>();
+
+
 
     @OneToMany(
             mappedBy = "houseAd",

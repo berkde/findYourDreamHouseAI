@@ -7,6 +7,7 @@ public class HouseAdDTO {
     private String houseAdUid;
     private String title;
     private String description;
+    private String city;
     private List<HouseAdImageDTO> images;
 
     public HouseAdDTO() {
@@ -29,6 +30,14 @@ public class HouseAdDTO {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
     }
 
     public List<HouseAdImageDTO> getImages() {
@@ -56,6 +65,7 @@ public class HouseAdDTO {
         sb.append("houseAdUid='").append(houseAdUid).append('\'');
         sb.append(", title='").append(title).append('\'');
         sb.append(", description='").append(description).append('\'');
+        sb.append(", city='").append(city).append('\'');
         sb.append('}');
         return sb.toString();
     }

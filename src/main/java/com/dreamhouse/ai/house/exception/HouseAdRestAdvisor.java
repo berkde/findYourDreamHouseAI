@@ -1,6 +1,7 @@
 package com.dreamhouse.ai.house.exception;
 
 import com.dreamhouse.ai.authentication.exception.UserIDNotFoundException;
+import com.dreamhouse.ai.cloud.exception.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;

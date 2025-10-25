@@ -11,8 +11,8 @@ public record AddHouseAdImagesRequestModel(String houseAdId, List<HouseAdImageDT
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof AddHouseAdImagesRequestModel that)) return false;
-        return Objects.equals(houseAdId, that.houseAdId) && Objects.equals(images, that.images);
+        if (!(o instanceof AddHouseAdImagesRequestModel(String adId, List<HouseAdImageDTO> images1))) return false;
+        return Objects.equals(houseAdId, adId) && Objects.equals(images, images1);
     }
 
     @Override

@@ -7,11 +7,14 @@ import com.dreamhouse.ai.house.model.request.CreateHouseAdRequestModel;
 import com.dreamhouse.ai.house.model.request.HouseAdMessageSendRequestModel;
 import com.dreamhouse.ai.house.model.request.UpdateHouseAdTitleAndDescriptionRequestModel;
 import com.dreamhouse.ai.house.service.impl.HouseAdsServiceImpl;
-import com.dreamhouse.ai.house.service.impl.StorageServiceImpl;
+import com.dreamhouse.ai.cloud.service.impl.StorageServiceImpl;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
+import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
+import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -40,6 +43,7 @@ public class HouseAdController {
         this.modelMapper = modelMapper;
     }
 
+    @WriteOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     @PostMapping("/create")
     public ResponseEntity<HouseAdDTO> createHouseAd(@RequestBody CreateHouseAdRequestModel requestModel) {
@@ -48,6 +52,7 @@ public class HouseAdController {
         return ResponseEntity.ok().body(houseAd);
     }
 
+    @WriteOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     @PutMapping("/updateTitleAndDescription")
     public ResponseEntity<HouseAdDTO> updateHouseAdTitleAndDescriptionRequestModel(@RequestBody UpdateHouseAdTitleAndDescriptionRequestModel requestModel) {
@@ -57,6 +62,7 @@ public class HouseAdController {
     }
 
 
+    @WriteOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     @PostMapping(
             value = "/{houseAdId}/images",
@@ -72,6 +78,7 @@ public class HouseAdController {
     }
 
 
+    @ReadOperation
     @GetMapping("/{houseAdId}/images")
     public ResponseEntity<List<HouseAdImageDTO>> listImages(@PathVariable String houseAdId) {
         var ad = houseAdsService.getHouseAdByHouseId(houseAdId);
@@ -80,7 +87,8 @@ public class HouseAdController {
                 .map(img -> {
                     var dto = modelMapper.map(img, HouseAdImageDTO.class);
                     if (img.getStorageKey() != null && !img.getStorageKey().isBlank()) {
-                        dto.setViewUrl(storageService.presignedGetUrl(img.getStorageKey(), Duration.ofMinutes(30)).orElse("undefined"));
+                        var url = storageService.presignedGetUrl(img.getStorageKey(), Duration.ofDays(7 )).orElse("undefined");
+                        dto.setViewUrl(url);
                     }
                     return dto;
                 })
@@ -91,6 +99,7 @@ public class HouseAdController {
 
 
 
+    @DeleteOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     @DeleteMapping("/{houseAdId}/images/{imageUid}")
     public ResponseEntity<Void> deleteImage(@PathVariable String houseAdId,
@@ -101,6 +110,7 @@ public class HouseAdController {
     }
 
 
+    @ReadOperation
     @GetMapping("/id/{houseAdId}")
     public ResponseEntity<HouseAdDTO> getHouseAdByHouseId(@PathVariable String houseAdId) {
         log.info("getHouseAdByHouseId - Getting house ad by id: {}", houseAdId);
@@ -109,7 +119,7 @@ public class HouseAdController {
     }
 
 
-
+    @ReadOperation
     @GetMapping
     public ResponseEntity<List<HouseAdDTO>> getAllHouseAds() {
         log.info("getAllHouseAds - Getting all house ads");
@@ -117,6 +127,7 @@ public class HouseAdController {
         return ResponseEntity.ok().body(houseAds);
     }
 
+    @DeleteOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     @DeleteMapping("/houseAdId")
     public ResponseEntity<Boolean> deleteHouseAd(@RequestParam String houseAdUid) {
@@ -126,6 +137,7 @@ public class HouseAdController {
     }
 
 
+    @WriteOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     @PostMapping("/message")
     public ResponseEntity<HouseAdMessageDTO> sendHouseAdMessage(@RequestBody HouseAdMessageSendRequestModel requestModel) {
@@ -135,6 +147,7 @@ public class HouseAdController {
     }
 
 
+    @ReadOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     @GetMapping("/message/{messageUid}")
     public ResponseEntity<HouseAdMessageDTO> findByMessageUid(@PathVariable("messageUid") String messageUid) {
@@ -143,6 +156,7 @@ public class HouseAdController {
         return ResponseEntity.ok().body(houseAdMessage.orElse(null));
     }
 
+    @ReadOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     @GetMapping("/messages/{houseUid}")
     public ResponseEntity<List<HouseAdMessageDTO>> findAllByHouseAdUid(@PathVariable("houseUid") String houseAdUid) {

@@ -1,6 +1,9 @@
 package com.dreamhouse.ai.house.service.impl;
 
 import com.dreamhouse.ai.authentication.repository.UserRepository;
+import com.dreamhouse.ai.cloud.exception.EmptyFileException;
+import com.dreamhouse.ai.cloud.exception.NoFilesException;
+import com.dreamhouse.ai.cloud.exception.UnsupportedContentException;
 import com.dreamhouse.ai.house.dto.HouseAdDTO;
 import com.dreamhouse.ai.house.dto.HouseAdImageDTO;
 import com.dreamhouse.ai.house.dto.HouseAdMessageDTO;
@@ -12,13 +15,14 @@ import com.dreamhouse.ai.house.model.event.ImageDeleteEvent;
 import com.dreamhouse.ai.house.model.request.CreateHouseAdRequestModel;
 import com.dreamhouse.ai.house.model.request.HouseAdMessageSendRequestModel;
 import com.dreamhouse.ai.house.model.request.UpdateHouseAdTitleAndDescriptionRequestModel;
-import com.dreamhouse.ai.house.model.response.StoragePutResponse;
+import com.dreamhouse.ai.cloud.model.StoragePutResponse;
 import com.dreamhouse.ai.house.repository.HouseAdMessageRepository;
 import com.dreamhouse.ai.house.repository.HouseAdRepository;
 import com.dreamhouse.ai.house.service.HouseAdsService;
-import com.dreamhouse.ai.house.service.StorageService;
+import com.dreamhouse.ai.cloud.service.StorageService;
 import io.micrometer.common.lang.Nullable;
 import jakarta.transaction.Transactional;
+import org.apache.commons.compress.utils.Sets;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +52,10 @@ public class HouseAdsServiceImpl implements HouseAdsService {
     private final StorageService storageService;
     private final ModelMapper modelMapper;
     private final static Logger log = LoggerFactory.getLogger(HouseAdsServiceImpl.class);
+    private final static String SORT_PROPERTY_PARAMETER = "createdAt";
+    private final static Set<String> ALLOWED_SORT_ATTRIBUTES = Sets.newHashSet("price", "beds", "baths", "sqft", "yearBuilt", "title", "createdAt", "updatedAt");
+    private final static String OBJECT_KEY_PREFIX = "house-ads/%s/%s%s";
+    private final static String ALTERNATIVE_FILE_NAME = "image";
     private final HouseAdMessageRepository houseAdMessageRepository;
     private final ApplicationEventPublisher publisher;
 
@@ -82,6 +90,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
             houseAd.setHouseAdUid(UUID.randomUUID().toString());
             houseAd.setTitle(createHouseAdRequestModel.title());
             houseAd.setDescription(createHouseAdRequestModel.description());
+            houseAd.setCity(createHouseAdRequestModel.city());
             houseAd.setUser(user);
 
             if (createHouseAdRequestModel.images() != null){
@@ -94,7 +103,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                             HouseAdImageEntity houseAdImageEntity = new HouseAdImageEntity();
                             houseAdImageEntity.setHouseAdImageUid(UUID.randomUUID().toString());
                             houseAdImageEntity.setImageName(image.getImageName());
-                            houseAdImageEntity.setImageUrl(image.getImageURL());
+                            houseAdImageEntity.setImageURL(image.getImageURL());
                             houseAdImageEntity.setImageDescription(image.getImageDescription());
                             houseAdImageEntity.setImageType(image.getImageType());
                             houseAdImageEntity.setImageThumbnail(image.getImageThumbnail());
@@ -163,40 +172,46 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         var ad = houseAdRepository.findByHouseAdUid(houseAdId)
                     .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdId));
 
+        log.info("addHouseAdImages - houseAdId = {}", houseAdId);
+
         List<HouseAdImageEntity> entities = new ArrayList<>();
         for (int i = 0; i < files.size(); i++) {
             MultipartFile file = files.get(i);
 
-            String content = Optional.ofNullable(file.getContentType()).orElse("");
-            if (!content.startsWith("image/")) {
-                throw new UnsupportedContentException("Unsupported content type: " + content);
-            }
             if (file.isEmpty()) throw new EmptyFileException("Empty file: " + file.getOriginalFilename());
 
-            long maxBytes = 10 * 1024 * 1024;
+            String content = Optional.ofNullable(file.getContentType()).orElse("");
+            if (!content.startsWith(ALTERNATIVE_FILE_NAME + "/")) {
+                throw new UnsupportedContentException("Unsupported content type: " + content);
+            }
+
+            long maxBytes = 10 * 1024L * 1024L;
             if(file.getSize() > maxBytes) throw new UnsupportedEncodingException("File size exceeds limit of 10MB: " + file.getOriginalFilename() + " " + file.getSize() + " bytes");
 
-            var objectKey = "house-ads/%s/%s%s".formatted(
+            var objectKey = OBJECT_KEY_PREFIX.formatted(
                     houseAdId, UUID.randomUUID(), safeExtractFileName(file.getOriginalFilename()));
             StoragePutResponse put = storageService
                     .putObject(objectKey, file.getBytes(), content)
                     .orElseThrow();
 
-                String thumbUrl = put.thumbnailUrl() != null ? put.thumbnailUrl() : put.url();
+            String thumbUrl = put.thumbnailUrl() != null ? put.thumbnailUrl() : put.url();
 
-                var img = new HouseAdImageEntity();
-                img.setHouseAdImageUid(UUID.randomUUID().toString());
-                img.setImageName(Optional.ofNullable(file.getOriginalFilename()).orElse("image"));
-                img.setImageUrl(put.url());
-                img.setImageType(content);
-                img.setImageThumbnail(thumbUrl);
-                img.setImageDescription(captions != null && i < captions.size() ? captions.get(i) : null);
-                img.setStorageKey(put.key());
-                ad.addImage(img);
-                entities.add(img);
+            log.info("Thumbnail url: {}", thumbUrl);
+
+            var img = new HouseAdImageEntity();
+            img.setHouseAdImageUid(UUID.randomUUID().toString());
+            img.setImageName(Optional.ofNullable(file.getOriginalFilename()).orElse(ALTERNATIVE_FILE_NAME));
+            img.setImageURL(put.url());
+            img.setImageType(content);
+            img.setImageThumbnail(thumbUrl);
+            img.setImageDescription(captions != null && i < captions.size() ? captions.get(i) : null);
+            img.setStorageKey(put.key());
+            ad.addImage(img);
+            entities.add(img);
         }
 
         houseAdRepository.save(ad);
+        log.info("New Images added to the house Ad - houseAdId = {}", houseAdId);
         return entities
                     .stream()
                     .map(e -> modelMapper.map(e, HouseAdImageDTO.class))
@@ -211,20 +226,26 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                 .findByHouseAdUid(houseAdId)
                 .orElseThrow(() -> new HouseAdNotFoundException("House ad not found: " + houseAdId));
 
+        log.info("removeHouseAdImageAndObjectStore - houseAdId = {}", houseAdId);
+
         var img = houseAd.getImages().stream()
                     .filter(image -> imageUid.equals(image.getHouseAdImageUid()))
                     .findFirst()
                     .orElse(null);
 
+        log.info("removeHouseAdImageAndObjectStore - imageUid = {}", imageUid);
+
         if (img == null) throw new HouseAdImageNotFoundException("House ad image not found: " + imageUid);
 
         if (img.getStorageKey() != null && !img.getStorageKey().isBlank()) {
             storageService.deleteObject(img.getStorageKey());
+            log.info("s3 image object removed - storageKey = {}", img.getStorageKey());
         }
 
         try {
             houseAd.removeImage(img);
             houseAdRepository.save(houseAd);
+            log.info("s3 image object removed both from DB and Cloud - houseAdId = {}", houseAd.getId());
             return Boolean.TRUE;
         } catch (HouseAdImageNotFoundException e) {
             log.error("removeHouseAdImageAndObjectStore - Error removing house ad image and object store: {}", imageUid, e);
@@ -352,8 +373,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         int p = Math.max(0, page);
         int s = Math.min(Math.max(1, size), 200);
 
-        Set<String> allowed = Set.of("price", "beds", "baths", "sqft", "yearBuilt", "title", "createdAt", "updatedAt");
-        String sortProperty = allowed.contains(sortBy) ? sortBy : "createdAt";
+        String sortProperty = ALLOWED_SORT_ATTRIBUTES.contains(sortBy) ? sortBy : SORT_PROPERTY_PARAMETER;
 
         Pageable pageable = PageRequest.of(p, s, Sort.by(direction == null ? Sort.Direction.ASC : direction, sortProperty));
 
@@ -393,8 +413,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         int p = Math.max(0, page);
         int s = Math.min(Math.max(1, size), 200);
 
-        Set<String> allowed = Set.of("price", "beds", "baths", "sqft", "yearBuilt", "title", "createdAt", "updatedAt");
-        String sortProperty = allowed.contains(sortBy) ? sortBy : "createdAt";
+        String sortProperty = ALLOWED_SORT_ATTRIBUTES.contains(sortBy) ? sortBy : SORT_PROPERTY_PARAMETER;
         Sort.Direction dir = (direction == null) ? Sort.Direction.DESC : direction;
 
         Pageable pageable = PageRequest.of(p, s, Sort.by(dir, sortProperty));

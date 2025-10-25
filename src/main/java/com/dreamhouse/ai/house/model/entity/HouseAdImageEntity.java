@@ -36,8 +36,8 @@ public class HouseAdImageEntity implements Serializable {
     @JoinColumn(name = "house_ad_fk", nullable = false)
     private HouseAdEntity houseAd;
 
-    @Column(name = "image_url", nullable = false, length = 1024)
-    private String imageUrl;
+    @Column(name = "image_url", length = 1024)
+    private String imageURL;
 
     @Column(name = "image_name", length = 255)
     private String imageName;
@@ -70,8 +70,8 @@ public class HouseAdImageEntity implements Serializable {
     public HouseAdEntity getHouseAd() { return houseAd; }
     public void setHouseAd(HouseAdEntity houseAd) { this.houseAd = houseAd; }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public String getImageURL() { return imageURL; }
+    public void setImageURL(String imageURL) { this.imageURL = imageURL; }
 
     public String getImageName() { return imageName; }
     public void setImageName(String imageName) { this.imageName = imageName; }
@@ -113,7 +113,7 @@ public class HouseAdImageEntity implements Serializable {
     public String toString() {
         return "HouseAdImageEntity{" +
                 "houseAdImageUid='" + houseAdImageUid + '\'' +
-                ", imageUrl='" + imageUrl + '\'' +
+                ", imageURL='" + imageURL + '\'' +
                 ", imageName='" + imageName + '\'' +
                 ", imageType='" + imageType + '\'' +
                 '}';

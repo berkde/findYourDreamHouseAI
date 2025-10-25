@@ -77,7 +77,7 @@ public class HouseAdMessageDTO {
         return houseAdUid;
     }
 
-    public void setHouseAdUid(HouseAdDTO houseAd) {
+    public void setHouseAdUid(String houseAdUid) {
         this.houseAdUid = houseAdUid;
     }
 
