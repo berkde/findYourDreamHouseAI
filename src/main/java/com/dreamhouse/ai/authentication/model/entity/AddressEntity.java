@@ -1,7 +1,15 @@
 package com.dreamhouse.ai.authentication.model.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Cacheable;
 import jakarta.persistence.Table;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Index;
+import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.OneToOne;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 

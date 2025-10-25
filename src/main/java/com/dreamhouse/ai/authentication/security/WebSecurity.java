@@ -1,6 +1,9 @@
-package com.dreamhouse.ai.authentication.configuration;
+package com.dreamhouse.ai.authentication.security;
 
 import com.dreamhouse.ai.authentication.repository.UserRepository;
+import com.dreamhouse.ai.authentication.security.filter.AuthenticationFilter;
+import com.dreamhouse.ai.authentication.security.filter.AuthorizationFilter;
+import com.dreamhouse.ai.authentication.security.filter.ClientIpLoggingFilter;
 import com.dreamhouse.ai.authentication.service.impl.UserServiceImpl;
 import com.dreamhouse.ai.authentication.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +33,9 @@ public class WebSecurity {
     private final UserServiceImpl userService;
     private final UrlBasedCorsConfigurationSource corsConfigurationSource;
     private final SecretKey key;
+    private static final String AUTH_API_LOGIN_ENDPOINT = "/login";
+    private static final String AUTH_API_REGISTER_ENDPOINT = "/api/v1/auth/register";
+    private static final String HOUSE_ADS_API_GET_ENDPOINT = "/api/v1/houseAds";
 
     @Autowired
     public WebSecurity(BCryptPasswordEncoder passwordEncoder,
@@ -55,12 +61,12 @@ public class WebSecurity {
                 .authenticationManager(authenticationManager(http))
                 .authorizeHttpRequests(request ->
                         request
-                                .requestMatchers(HttpMethod.POST,"/login").permitAll()
-                                .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/v1/houseAds").permitAll()
+                                .requestMatchers(HttpMethod.POST,AUTH_API_LOGIN_ENDPOINT).permitAll()
+                                .requestMatchers(HttpMethod.POST, AUTH_API_REGISTER_ENDPOINT).permitAll()
+                                .requestMatchers(HttpMethod.GET, HOUSE_ADS_API_GET_ENDPOINT).permitAll()
                                 .anyRequest().authenticated())
                 .addFilterBefore(clientIpLoggingFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAt(new AuthenticationFilter(authenticationManager(http), userService, userRepository, securityUtil, key),
+                .addFilterAt(new AuthenticationFilter(authenticationManager(http), userRepository, securityUtil, key),
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new AuthorizationFilter(authenticationManager(http), key), UsernamePasswordAuthenticationFilter.class)
                 .formLogin(AbstractHttpConfigurer::disable)

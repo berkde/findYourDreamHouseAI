@@ -10,6 +10,10 @@ public class AddressDTO {
     private String billingZip;
 
     public AddressDTO() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
     }
 
     public String getAddressID() {

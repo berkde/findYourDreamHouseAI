@@ -14,7 +14,6 @@ import com.dreamhouse.ai.authentication.repository.AuthorityRepository;
 import com.dreamhouse.ai.authentication.repository.RoleRepository;
 import com.dreamhouse.ai.authentication.repository.UserRepository;
 import com.dreamhouse.ai.authentication.service.UserService;
-import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +25,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.management.relation.RoleNotFoundException;
 import java.util.Date;
@@ -87,8 +87,8 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                     savedUserEntity.getName(),
                     savedUserEntity.getLastname());
         } catch (Exception e) {
-            log.error("registerUser - Error creating user account: {}", userRegisterRequest.username(), e);
-            throw new UserAccountNotCreatedException("Error creating user account: " + e.getMessage() + " " + userRegisterRequest.username() + " " + userRegisterRequest.password());
+            log.error("registerUser - Error creating user account: {} - reason:{}", userRegisterRequest.username(), e.getMessage());
+            throw new UserAccountNotCreatedException("Error creating user account");
         }
     }
 
@@ -127,17 +127,20 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
             return Boolean.TRUE;
         } catch (Exception e) {
-            log.error("editRoleAuthorities - Error editing authorities: {}", roleName, e);
-            throw new AuthoritiesNotEditedException("Error editing authorities: " + e.getMessage() + " " + roleName + " " + authorities + " " + operation);
+            log.error("editRoleAuthorities - Error editing authorities: {} - reason: {}", roleName, e.getMessage());
+            throw new AuthoritiesNotEditedException("Error editing authorities");
         }
     }
 
 
     @Override
     @CacheEvict(value = "users", allEntries = true)
+    @Transactional
     public Boolean deleteAccount(String userId) {
         try {
-            UserEntity userEntity = userRepository.findByUserID(userId).orElseThrow(() -> new UserIDNotFoundException("User not found"));
+            UserEntity userEntity = userRepository
+                    .findByUserID(userId)
+                    .orElseThrow(() -> new UserIDNotFoundException("User not found"));
             userRepository.delete(userEntity);
             log.info("deleteAccount - User deleted: {}", userId);
             return Boolean.TRUE;
@@ -149,27 +152,31 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
     @Override
     @Cacheable(value = "users", key = "#username")
+    @Transactional(readOnly = true)
     public UserDTO getUserByUsername(String username) {
         try {
-            var userEntity = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+            var userEntity = userRepository
+                    .findByUsername(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
             log.info("getUserByUsername - User found: {}", userEntity);
             return modelMapper.map(userEntity, UserDTO.class);
         } catch (Exception e) {
-            log.error("getUserByUsername - Error finding user: {}", username, e);
-            throw new UsernameNotFoundException("User not found: " + username + " " + e.getMessage());
+            log.error("getUserByUsername - Error finding user: {} - reason: {}", username, e.getMessage());
+            throw new UsernameNotFoundException("User not found");
         }
     }
 
     @Override
     @Cacheable(value = "users", key = "#userId")
+    @Transactional(readOnly = true)
     public UserDTO getUserById(String userId) {
         try {
             var userEntity = userRepository.findByUserID(userId).orElseThrow(() -> new UserIDNotFoundException("User not found"));
-            log.info("getUserById - User found: {}", userEntity);
+            log.info("getUserById - User found: {}", userEntity.getUserID());
             return modelMapper.map(userEntity, UserDTO.class);
         } catch (Exception e) {
-            log.error("getUserById - Error finding user: {}", userId, e);
-            throw new UserIDNotFoundException("User not found: " + userId + " " + e.getMessage());
+            log.error("getUserById - Error finding user: {} - reason: {}", userId, e.getMessage());
+            throw new UserIDNotFoundException("User not found");
         }
     }
 
@@ -178,7 +185,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     @Override
     public Boolean addOrUpdateBillingAddress(String userId, AddressCreationRequestModel model){
         UserEntity user = userRepository.findByUserID(userId)
-                .orElseThrow(() -> new UserIDNotFoundException("User not found: " + userId));
+                .orElseThrow(() -> new UserIDNotFoundException("User not found"));
 
         try {
             AddressEntity addr = user.getBillingAddress();
@@ -198,18 +205,18 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             if (model.billingZip() != null)
                 addr.setZip(model.billingZip());
 
-            log.info("addAddress - Address added: {}", addr);
+            log.info("addAddress - Address added: {}", addr.getAddressID());
             userRepository.save(user);
 
             return Boolean.TRUE;
         } catch (Exception e) {
             log.error("addAddress - Error adding address: {}", userId, e);
-            throw new AddressAddingException("Error adding address: " + e.getMessage() + " " + userId + " " + model.billingStreet() + " " + model.billingCity() + " " + model.billingState() + " " + model.billingZip());
+            throw new AddressAddingException("Error adding address");
         }
     }
 
 
-    @Transactional
+    @Transactional(readOnly = true)
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         if (!userRepository.existsByUsername(username)) {
@@ -217,11 +224,13 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             throw new UsernameNotFoundException("User not found");
         }
 
-        var userEntity =  userRepository
+        return userRepository
                 .findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        log.info("loadUserByUsername - User found: {}", userEntity.getUsername());
-        return new User(userEntity);
+                .map(User::new)
+                .orElseThrow(() -> {
+                    log.info("loadUserByUsername - User found");
+                    return new UsernameNotFoundException("User couldn't be fetched");
+                });
     }
 
 }

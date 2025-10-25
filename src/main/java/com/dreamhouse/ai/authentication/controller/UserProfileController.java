@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserProfileController {
     private final UserServiceImpl userService;
     private final SecurityUtil securityUtil;
-    private final static Logger log = LoggerFactory.getLogger(UserProfileController.class);
+    private static final Logger log = LoggerFactory.getLogger(UserProfileController.class);
 
     @Autowired
     public UserProfileController(UserServiceImpl userService, SecurityUtil securityUtil) {
@@ -30,11 +30,11 @@ public class UserProfileController {
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     public ResponseEntity<UserDTO> getUserProfile(@PathVariable("userId") String userId,
                                                   @AuthenticationPrincipal String username) {
-        if (!securityUtil.isUserRequestValid(userId, username)) {
+        if (securityUtil.isUserRequestValid(userId, username) == Boolean.FALSE) {
             return ResponseEntity.badRequest().body(null);
         }
 
-        log.info("getUserProfile - Getting user profile for user: {}", userId);
+        log.info("Getting user profile for user");
         var userProfile = userService.getUserById(userId);
         return ResponseEntity.ok(userProfile);
     }
@@ -44,12 +44,13 @@ public class UserProfileController {
     public ResponseEntity<String> addOrUpdateBillingAddress(@PathVariable("userId") String userId,
                                                              @RequestBody AddressCreationRequestModel model,
                                                              @AuthenticationPrincipal String username) {
-        if (!securityUtil.isUserRequestValid(userId, username)) {
+        if (securityUtil.isUserRequestValid(userId, username) == Boolean.FALSE) {
             return ResponseEntity.badRequest().body(null);
         }
 
-        log.info("addBillingAndShippingAddress - Adding billing and shipping address");
+        log.info("Adding billing and shipping address");
         var isAddressAdded = userService.addOrUpdateBillingAddress(userId, model);
-        return isAddressAdded ? ResponseEntity.ok("Address added/updated") : ResponseEntity.badRequest().body("Address not added/updated");
+        return isAddressAdded == Boolean.TRUE ? ResponseEntity.ok("Address added/updated") :
+                                                ResponseEntity.badRequest().body("Address not added/updated");
     }
 }

@@ -1,6 +1,17 @@
 package com.dreamhouse.ai.authentication.model.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Cacheable;
+import jakarta.persistence.Table;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.CascadeType;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -8,6 +19,8 @@ import java.util.Set;
 
 @Entity
 @Table(name = "authorities")
+@Cacheable
+@Cache(usage = CacheConcurrencyStrategy.READ_WRITE)
 public class AuthorityEntity implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;

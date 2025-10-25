@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserAuthController {
     private final UserServiceImpl userService;
     private final SecurityUtil securityUtil;
-    private final static Logger log = LoggerFactory.getLogger(UserAuthController.class);
+    private static final Logger log = LoggerFactory.getLogger(UserAuthController.class);
 
     @Autowired
     public UserAuthController(UserServiceImpl userService, SecurityUtil securityUtil) {
@@ -32,7 +32,7 @@ public class UserAuthController {
     @PostMapping(path = "/register")
     @PermitAll
     public ResponseEntity<UserRegisterResponse> registerUser(@Valid @RequestBody UserRegisterRequest registerRequest) {
-        log.info("registerUser - Registering user: {}", registerRequest.username());
+        log.info("Registering user");
         UserRegisterResponse registeredUser = userService.registerUser(registerRequest);
         return ResponseEntity.ok(registeredUser);
     }
@@ -41,19 +41,20 @@ public class UserAuthController {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
     public ResponseEntity<String> deleteAccount(@PathVariable("userId") String userId,
                                                 @AuthenticationPrincipal String authenticatedUsername) {
-        if (!securityUtil.isUserRequestValid(userId, authenticatedUsername)) {
+        if (securityUtil.isUserRequestValid(userId, authenticatedUsername) == Boolean.FALSE) {
             return ResponseEntity.badRequest().body(null);
         }
 
-        log.info("deleteAccount - Deleting account: {}", userId);
+        log.info("Deleting account");
         var isAccountDeleted = userService.deleteAccount(userId);
-        return isAccountDeleted ? ResponseEntity.ok("Account deleted") : ResponseEntity.badRequest().body("Account not deleted");
+        return isAccountDeleted == Boolean.TRUE ? ResponseEntity.ok("Account deleted") :
+                                                  ResponseEntity.badRequest().body("Account not deleted");
     }
 
     @PostMapping("/authority/edit")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<Boolean> editRoleAuthorities(@RequestBody RoleAuthorityEditRequestModel roleAuthorityEditRequest) {
-        log.info("editRoleAuthorities - Editing role authorities: {}", roleAuthorityEditRequest.roleName());
+        log.info("Editing role authorities");
         return ResponseEntity.ok(userService.editRoleAuthorities(roleAuthorityEditRequest));
     }
 }

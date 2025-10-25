@@ -61,7 +61,6 @@ public class SecurityUtil {
         if (attrs == null) return Boolean.FALSE;
 
         String token = attrs.getRequest().getHeader(AUTHORIZATION_HEADER);
-        // Do not log full Authorization header to avoid leaking tokens
 
         if (!isUserTokenValid(token, queriedUserId, username)) {
             log.error("Invalid token");

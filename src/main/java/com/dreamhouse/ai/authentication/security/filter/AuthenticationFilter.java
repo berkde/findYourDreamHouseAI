@@ -1,9 +1,8 @@
-package com.dreamhouse.ai.authentication.configuration;
+package com.dreamhouse.ai.authentication.security.filter;
 
 import com.dreamhouse.ai.authentication.exception.AuthenticationFailedException;
 import com.dreamhouse.ai.authentication.model.request.LoginRequestModel;
 import com.dreamhouse.ai.authentication.repository.UserRepository;
-import com.dreamhouse.ai.authentication.service.impl.UserServiceImpl;
 import com.dreamhouse.ai.authentication.util.SecurityUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
@@ -27,7 +26,11 @@ import java.util.Date;
 
 public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     private final Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
-    private final UserServiceImpl userService;
+    private static final String JWT_TOKEN_HEADER_PREFIX = "Bearer ";
+    private static final String JWT_TOKEN_CLAIMS_KEY = "Authorities";
+    private static final String JWT_AUTHORIZATION_HEADER = "Authorization";
+    private static final String JWT_CONTENT_TYPE = "application/json";
+    private static final String AUTHENTICATION_FILTER_DEFAULT_LOGIN_URL = "/login";
     private final UserRepository userRepository;
     private final SecurityUtil securityUtil;
     private final SecretKey key;
@@ -35,16 +38,14 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     private static final long TOKEN_EXPIRATION = 3600000L;
 
     public AuthenticationFilter(AuthenticationManager authenticationManager,
-                                UserServiceImpl userService,
                                 UserRepository userRepository,
                                 SecurityUtil securityUtil,
                                 SecretKey key) {
         super.setAuthenticationManager(authenticationManager);
-        this.userService = userService;
         this.userRepository = userRepository;
         this.securityUtil = securityUtil;
         this.key = key;
-        setFilterProcessesUrl("/login");
+        setFilterProcessesUrl(AUTHENTICATION_FILTER_DEFAULT_LOGIN_URL);
     }
 
     @Override
@@ -63,10 +64,10 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
                     )
             );
         } catch (IOException e) {
-            logger.error(String.format("Failed to read login request body, details: %s", e));
+            logger.error("Failed to read login request body, details: {}", e.getMessage());
             throw new AuthenticationFailedException("Failed to read login request body");
         } catch (Exception e) {
-            logger.error(String.format("Failed to authenticate user, details: %s", e));
+            logger.error("Failed to authenticate user, details: {}", e.getMessage());
             throw new AuthenticationFailedException("Failed to authenticate user");
         }
 
@@ -96,20 +97,20 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
             } else {
                 String rawToken = Jwts.builder()
                         .subject(username)
-                        .claim("authorities", authorities)
+                        .claim(JWT_TOKEN_CLAIMS_KEY, authorities)
                         .issuedAt(new Date())
                         .expiration(new Date(System.currentTimeMillis() + TOKEN_EXPIRATION))
                         .encryptWith(key, Jwts.ENC.A256CBC_HS512)
                         .compact();
-                tokenWithPrefix = "Bearer " + rawToken;
+                tokenWithPrefix = JWT_TOKEN_HEADER_PREFIX + rawToken;
                 user.setAuthorizationToken(tokenWithPrefix);
             }
 
             user.setLastLogin(new Date());
             userRepository.save(user);
 
-            response.addHeader("Authorization", tokenWithPrefix);
-            response.setContentType("application/json");
+            response.addHeader(JWT_AUTHORIZATION_HEADER, tokenWithPrefix);
+            response.setContentType(JWT_CONTENT_TYPE);
             response.setStatus(HttpServletResponse.SC_OK);
 
 

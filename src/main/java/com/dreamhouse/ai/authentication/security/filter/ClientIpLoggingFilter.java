@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.authentication.configuration;
+package com.dreamhouse.ai.authentication.security.filter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,12 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Logs client IP for every HTTP request.
- *
- * Resolves IP using standard proxy headers (X-Forwarded-For, X-Real-IP)
- * and falls back to request.getRemoteAddr().
- */
+
 @Component
 public class ClientIpLoggingFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(ClientIpLoggingFilter.class);

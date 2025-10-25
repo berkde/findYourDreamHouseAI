@@ -11,6 +11,10 @@ public class UserDTO {
     private AddressDTO billingAddress;
 
     public UserDTO() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
     }
 
     public String getUserID() {

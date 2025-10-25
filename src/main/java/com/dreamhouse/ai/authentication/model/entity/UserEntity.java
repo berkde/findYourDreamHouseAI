@@ -1,11 +1,25 @@
 package com.dreamhouse.ai.authentication.model.entity;
 
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
-import jakarta.persistence.*;
-import jakarta.persistence.CascadeType;
+import jakarta.persistence.Cacheable;
 import jakarta.persistence.Table;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Index;
+import jakarta.persistence.OneToOne;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.OneToMany;
 
 
 import java.io.Serial;
@@ -39,7 +53,7 @@ public class UserEntity implements Serializable {
     @Column(nullable = false) private String name;
     @Column(nullable = false) private String lastname;
     @Column(nullable = false) private String password;
-    @Column(name = "authorization_token", unique = true) private String authorizationToken;
+    @Column(name = "authorization_token", unique = true, length = 512) private String authorizationToken;
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "last_login")
