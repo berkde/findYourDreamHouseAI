@@ -28,6 +28,13 @@ public class FilterSpec {
         this.minBaths = minBaths;
         this.minSqft = minSqft;
         this.maxSqft = maxSqft;
+        this.minYearBuilt = minYearBuilt;
+        this.types = types;
+        this.hasParking = parking;
+        this.petsAllowed = petsAllowed;
+        this.waterfront = waterfront;
+        this.keywords = keywords;
+        this.polygon = polygon;
     }
 
     public String getCity() {
@@ -156,6 +163,14 @@ public class FilterSpec {
 
     public void setPolygon(List<double[]> polygon) {
         this.polygon = polygon;
+    }
+
+    public Integer getMaxBeds() {
+        return maxBeds;
+    }
+
+    public void setMaxBeds(Integer maxBeds) {
+        this.maxBeds = maxBeds;
     }
 
     @Override

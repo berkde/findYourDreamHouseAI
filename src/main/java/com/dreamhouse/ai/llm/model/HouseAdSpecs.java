@@ -1,6 +1,7 @@
 package com.dreamhouse.ai.llm.model;
 
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -8,7 +9,12 @@ import java.util.ArrayList;
 
 public class HouseAdSpecs {
     public static Specification<HouseAdEntity> byFilter(FilterSpec f) {
-        return (root, q, cb) -> {
+        return (root, query, cb) -> {
+
+            root.fetch("images", JoinType.LEFT);
+            assert query != null;
+            query.distinct(true);
+
             var p = new ArrayList<Predicate>();
             if (f.city != null) p.add(cb.equal(cb.lower(root.get("city")), f.city.toLowerCase()));
             if (f.neighborhoods != null && !f.neighborhoods.isEmpty()) p.add(root.get("neighborhood").in(f.neighborhoods));

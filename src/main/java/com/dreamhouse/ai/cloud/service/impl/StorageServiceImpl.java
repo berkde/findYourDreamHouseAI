@@ -14,10 +14,7 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Utilities;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 
@@ -33,7 +30,11 @@ public class StorageServiceImpl implements StorageService {
     private final S3Presigner s3Presigner;
     private final SecretsService secretsService;
     private final String secretId;
+    private static final String AWS_BUCKET_JSON_FIELD = "bucket_name";
+    private static final String BASE_PATH_JSON_FIELD = "basePath";
+    private static final String SERVER_ENCRYPTION_TYPE = "AES256";
     private final static Logger log = LoggerFactory.getLogger(StorageServiceImpl.class);
+
 
     public StorageServiceImpl(S3Client s3Client,
                               S3Presigner s3Presigner,
@@ -56,7 +57,9 @@ public class StorageServiceImpl implements StorageService {
                 expiry = Duration.ofMinutes(15);
             }
 
-            var bucket = secretsService.getSecret(secretId, "bucket_name").replace("\"", "");
+            var bucket = secretsService.getSecret(secretId, AWS_BUCKET_JSON_FIELD).replace("\"", "");
+
+            log.info("Bucket {}", bucket);
 
             GetObjectRequest getReq = GetObjectRequest.builder()
                     .bucket(bucket)
@@ -65,15 +68,21 @@ public class StorageServiceImpl implements StorageService {
                     // .responseContentDisposition("inline")    // optional: ensure inline display
                     .build();
 
+            log.info("presignedGetUrl getReq = {}", getReq);
+
             GetObjectPresignRequest presignReq = GetObjectPresignRequest.builder()
                     .signatureDuration(expiry)
                     .getObjectRequest(getReq)
                     .build();
 
-            return Optional.of(s3Presigner.presignGetObject(presignReq).url().toString());
+            log.info("presignedGetUrl presignReq = {}", presignReq.getObjectRequest());
+
+            var url = s3Presigner.presignGetObject(presignReq).url().toString();
+            log.info("presignedGetUrl url = {}", url);
+            return Optional.of(url);
         } catch (Exception e) {
             log.error("presignedGetUrl - Error creating presigned get url for key: {}", key, e);
-            return Optional.empty();
+            throw new CloudException("Error creating presigned get url for key");
         }
     }
 
@@ -81,29 +90,28 @@ public class StorageServiceImpl implements StorageService {
     @Override
     public Optional<StoragePutResponse> putObject(String key, byte[] bytes, String contentType) {
         try {
-            var basePath = secretsService.getSecret(secretId, "basePath").replace("\"", "");
-            var bucket = secretsService.getSecret(secretId, "bucket_name").replace("\"", "");
+            var basePath = secretsService.getSecret(secretId, BASE_PATH_JSON_FIELD).replace("\"", "");
+            var bucket = secretsService.getSecret(secretId, AWS_BUCKET_JSON_FIELD).replace("\"", "");
 
             log.info("basePath: {}", basePath);
             log.info("bucket: {}", bucket);
 
-            String objectKey = (basePath.isEmpty() ? "" : basePath) + key;
-            log.info("object key: {}", objectKey);
+            log.info("key: {}", key);
 
 
             PutObjectRequest req = PutObjectRequest.builder()
                     .bucket(bucket)
-                    .key(objectKey)
+                    .key(key)
                     .contentType(contentType)
-                    .serverSideEncryption("AES256")
+                    .serverSideEncryption(SERVER_ENCRYPTION_TYPE)
                     .build();
 
             var resp = s3Client.putObject(req, RequestBody.fromBytes(bytes));
-            URL url = s3Utilities.getUrl(b -> b.bucket(bucket).key(objectKey));
+            URL url = s3Utilities.getUrl(b -> b.bucket(bucket).key(key));
 
             log.info("url: {}", url);
 
-            return Optional.of(new StoragePutResponse(objectKey, resp.eTag(), url.toString()));
+            return Optional.of(new StoragePutResponse(key, resp.eTag(), url.toString()));
         } catch (AwsServiceException e) {
             throw new CloudException(e.getMessage());
         } catch (SdkClientException e) {
@@ -116,8 +124,8 @@ public class StorageServiceImpl implements StorageService {
     @Override
     public void deleteObject(String key) {
         try {
-            var basePath = secretsService.getSecret(secretId, "basePath").replace("\"", "");
-            var bucket = secretsService.getSecret(secretId, "bucket_name").replace("\"", "");
+            var basePath = secretsService.getSecret(secretId, BASE_PATH_JSON_FIELD).replace("\"", "");
+            var bucket = secretsService.getSecret(secretId, AWS_BUCKET_JSON_FIELD).replace("\"", "");
             String objectKey = (basePath.isEmpty() ? "" : basePath) + key;
 
             DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()

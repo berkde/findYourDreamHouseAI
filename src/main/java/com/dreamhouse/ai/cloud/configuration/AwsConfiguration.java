@@ -17,6 +17,8 @@ import software.amazon.awssdk.services.secretsmanager.SecretsManagerClient;
 @Configuration
 @EnableConfigurationProperties(AwsProperties.class)
 public class AwsConfiguration {
+    private static final String CLOUD_WATCH_KEY_PREFIX = "cloudwatch.";
+    private static final String CLOUD_WATCH_ENV_PROPERTY = "management.metrics.export.cloudwatch.";
 
     @Bean
     public S3Client s3Client(AwsProperties properties) {
@@ -45,8 +47,8 @@ public class AwsConfiguration {
     @Bean
     public CloudWatchConfig cloudWatchConfig(Environment env) {
         return key -> {
-            String k = key.startsWith("cloudwatch.") ? key.substring("cloudwatch.".length()) : key;
-            return env.getProperty("management.metrics.export.cloudwatch." + k);
+            String k = key.startsWith(CLOUD_WATCH_KEY_PREFIX) ? key.substring(CLOUD_WATCH_KEY_PREFIX.length()) : key;
+            return env.getProperty(CLOUD_WATCH_ENV_PROPERTY + k);
         };
     }
 

@@ -99,7 +99,7 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
                         .claim("authorities", authorities)
                         .issuedAt(new Date())
                         .expiration(new Date(System.currentTimeMillis() + TOKEN_EXPIRATION))
-                        .encryptWith(key, Jwts.ENC.A256GCM)
+                        .encryptWith(key, Jwts.ENC.A256CBC_HS512)
                         .compact();
                 tokenWithPrefix = "Bearer " + rawToken;
                 user.setAuthorizationToken(tokenWithPrefix);
