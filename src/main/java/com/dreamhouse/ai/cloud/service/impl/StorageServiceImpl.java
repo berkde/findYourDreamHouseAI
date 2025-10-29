@@ -10,6 +10,8 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,9 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -42,15 +47,20 @@ public class StorageServiceImpl implements StorageService {
     private final SecretsService secretsService;
     private final RedissonClient redissonClient;
     private final QueryKeyServiceImpl queryKeyService;
+    private final Executor executor;
+    private final ConcurrentHashMap<String, CompletableFuture<String>> storageInflight;
 
 
 
+    @Autowired
     public StorageServiceImpl(S3Client s3Client,
                               S3Presigner s3Presigner,
                               SecretsService secretsService,
                               @Value("${security.jwt.secret-id}") String secretId,
                               RedissonClient redissonClient,
-                              QueryKeyServiceImpl queryKeyService
+                              QueryKeyServiceImpl queryKeyService,
+                              @Qualifier("deduplicationExecutor") Executor executor,
+                              ConcurrentHashMap<String, CompletableFuture<String>> storageInflight
                               ) {
         this.s3Client = s3Client;
         this.s3Utilities = s3Client.utilities();
@@ -59,6 +69,8 @@ public class StorageServiceImpl implements StorageService {
         this.secretId = secretId;
         this.redissonClient = redissonClient;
         this.queryKeyService = queryKeyService;
+        this.executor = executor;
+        this.storageInflight = storageInflight;
     }
 
     @Override
@@ -67,7 +79,7 @@ public class StorageServiceImpl implements StorageService {
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
-            if(!lock.tryLock(2,10, TimeUnit.SECONDS)) {
+            if(!lock.tryLock(3,10, TimeUnit.SECONDS)) {
                 log.warn("Get presigned URL request throttled for username: {}", lockKey);
                 throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
             }
@@ -77,29 +89,38 @@ public class StorageServiceImpl implements StorageService {
                 expiry = Duration.ofMinutes(15);
             }
 
-            var bucket = secretsService.getSecret(secretId, AWS_BUCKET_JSON_FIELD).replace("\"", "");
+            Duration finalExpiry = expiry;
+            CompletableFuture<String> presignedURLReply = storageInflight.computeIfAbsent(lockKey, __ ->
+                    CompletableFuture.supplyAsync(() -> {
 
-            log.info("Bucket {}", bucket);
+                                var bucket = secretsService.getSecret(secretId, AWS_BUCKET_JSON_FIELD).replace("\"", "");
 
-            GetObjectRequest getReq = GetObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(key)
-                    .responseContentType("image/jpeg")
-                    .responseContentDisposition("inline")
-                    .build();
+                                log.info("Bucket {}", bucket);
 
-            log.info("presignedGetUrl getReq = {}", getReq);
+                                GetObjectRequest getReq = GetObjectRequest.builder()
+                                        .bucket(bucket)
+                                        .key(key)
+                                        .responseContentType("image/jpeg")
+                                        .responseContentDisposition("inline")
+                                        .build();
 
-            GetObjectPresignRequest presignReq = GetObjectPresignRequest.builder()
-                    .signatureDuration(expiry)
-                    .getObjectRequest(getReq)
-                    .build();
+                                log.info("presignedGetUrl getReq = {}", getReq);
 
-            log.info("presignedGetUrl presignReq = {}", presignReq.getObjectRequest());
+                                GetObjectPresignRequest presignReq = GetObjectPresignRequest.builder()
+                                        .signatureDuration(finalExpiry)
+                                        .getObjectRequest(getReq)
+                                        .build();
 
-            var url = s3Presigner.presignGetObject(presignReq).url().toString();
-            log.info("presignedGetUrl url = {}", url);
-            return Optional.of(url);
+                                log.info("presignedGetUrl presignReq = {}", presignReq.getObjectRequest());
+
+                                var url = s3Presigner.presignGetObject(presignReq).url().toString();
+                                log.info("presignedGetUrl url = {}", url);
+                                return url;
+                    }, executor)
+            );
+
+            return Optional.of(presignedURLReply.join());
+
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
             log.error("Get presigned URL interrupted for key: {}", lockKey);
