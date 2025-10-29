@@ -5,8 +5,6 @@ import com.dreamhouse.ai.llm.service.agent.HouseSearchAgent;
 import com.dreamhouse.ai.llm.service.agent.ImageSearchAgent;
 import com.dreamhouse.ai.llm.service.impl.ImageSimilaritySearchServiceImpl;
 import com.dreamhouse.ai.llm.util.AIUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
@@ -27,7 +25,6 @@ import java.util.Map;
 @RequestMapping("/api/v1/ai")
 @Validated
 public class AiController {
-    private static final Logger log = LoggerFactory.getLogger(AiController.class);
     private final HouseSearchAgent houseSearchAgent;
     private final ImageSearchAgent imageSearchAgent;
     private final ImageSimilaritySearchServiceImpl imageSimilaritySearchService;
