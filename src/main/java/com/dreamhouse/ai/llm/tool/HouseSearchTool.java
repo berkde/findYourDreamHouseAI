@@ -3,21 +3,22 @@ package com.dreamhouse.ai.llm.tool;
 import com.dreamhouse.ai.cache.service.impl.QueryKeyServiceImpl;
 import com.dreamhouse.ai.house.dto.HouseAdDTO;
 
-import com.dreamhouse.ai.house.dto.HouseAdImageDTO;
 import com.dreamhouse.ai.house.repository.HouseAdRepository;
 import com.dreamhouse.ai.cloud.service.impl.StorageServiceImpl;
 import com.dreamhouse.ai.llm.model.request.FilterSpec;
 import com.dreamhouse.ai.llm.model.request.HouseAdSpecs;
 import com.dreamhouse.ai.llm.model.reply.HouseSearchReply;
+import com.dreamhouse.ai.mapper.HouseAdImageMapper;
+import com.dreamhouse.ai.mapper.HouseAdMapper;
 import dev.langchain4j.agent.tool.Tool;
 import org.apache.logging.log4j.util.PerformanceSensitive;
 import org.hibernate.exception.LockAcquisitionException;
-import org.modelmapper.ModelMapper;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
@@ -27,6 +28,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 
@@ -39,22 +41,30 @@ public class HouseSearchTool {
     private static final Integer PAGE_NUMBER = 0;
     private final StorageServiceImpl storageService;
     private final HouseAdRepository repository;
-    private final ModelMapper mapper;
-    private final ConcurrentHashMap<String, CompletableFuture<HouseSearchReply>> inflight = new ConcurrentHashMap<>();
+    private final HouseAdImageMapper houseAdImageMapper;
+    private final HouseAdMapper houseAdMapper;
+    private final ConcurrentHashMap<String, CompletableFuture<HouseSearchReply>> houseSearchInflight;
     private final RedissonClient redissonClient;
     private final QueryKeyServiceImpl  queryKeyService;
+    private final Executor executor;
 
     @Autowired
     public HouseSearchTool(HouseAdRepository repository,
                            StorageServiceImpl storageService,
-                           ModelMapper mapper,
+                           HouseAdImageMapper houseAdImageMapper,
+                           HouseAdMapper houseAdMapper,
                            RedissonClient redissonClient,
-                           QueryKeyServiceImpl queryKeyService) {
+                           QueryKeyServiceImpl queryKeyService,
+                           ConcurrentHashMap<String, CompletableFuture<HouseSearchReply>> houseSearchInflight,
+                           @Qualifier("houseSearchExecutor") Executor executor) {
         this.repository = repository;
         this.storageService = storageService;
-        this.mapper = mapper;
+        this.houseAdImageMapper = houseAdImageMapper;
+        this.houseAdMapper = houseAdMapper;
         this.redissonClient = redissonClient;
         this.queryKeyService = queryKeyService;
+        this.houseSearchInflight = houseSearchInflight;
+        this.executor = executor;
     }
 
     @Tool("Search the database for houses matching the given filters")
@@ -77,11 +87,11 @@ public class HouseSearchTool {
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
-            if (!lock.tryLock(1, 5, TimeUnit.SECONDS)) {
+            if (!lock.tryLock(3, 10, TimeUnit.SECONDS)) {
                 throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
             }
 
-            CompletableFuture<HouseSearchReply> houseSearchReply = inflight.computeIfAbsent(lockKey, __ ->
+            CompletableFuture<HouseSearchReply> houseSearchReply = houseSearchInflight.computeIfAbsent(lockKey, __ ->
                     CompletableFuture.supplyAsync(() -> {
                                 log.info("Searching for houses matching the given filters");
                                 var spec = HouseAdSpecs.byFilter(filterSpec);
@@ -94,14 +104,14 @@ public class HouseSearchTool {
                                             var houseAdImageDTOs = entity.getImages()
                                                     .stream()
                                                     .map(image -> {
-                                                        var dto = mapper.map(image, HouseAdImageDTO.class);
+                                                        var dto = houseAdImageMapper.apply(image);
                                                         dto.setViewUrl(storageService
                                                                 .presignedGetUrl(image.getStorageKey(), Duration.ofDays(7))
                                                                 .orElseThrow());
                                                         return dto;
                                                     })
                                                     .toList();
-                                            var dto = mapper.map(entity, HouseAdDTO.class);
+                                            var dto = houseAdMapper.apply(entity);
                                             dto.setImages(houseAdImageDTOs);
                                             return dto;
                                         })
@@ -111,13 +121,13 @@ public class HouseSearchTool {
                                 var reply = new HouseSearchReply();
                                 reply.setHouseAdDTOS(houseAdDTOS);
                                 return reply;
-                            })
+                            },executor)
             );
 
             try {
                 return houseSearchReply.join();
             } finally {
-                inflight.remove(lockKey, houseSearchReply);
+                houseSearchInflight.remove(lockKey, houseSearchReply);
             }
 
         } catch (InterruptedException e) {
