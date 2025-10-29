@@ -1034,12 +1034,5 @@ sudo iptables -L
 
 ### Contact Information
 
-- **Development Team**: dev-team@company.com
-- **DevOps Team**: devops@company.com
-- **Emergency Hotline**: +1-555-EMERGENCY
-- **Slack Channel**: #findyourdreamhouse-support
-
----
-
-**Still having issues?** [Open a support ticket](https://github.com/your-org/FindYourDreamHouseAI/issues) with detailed error logs and system information.
+**Still having issues?** [Open a support ticket](https://github.com/berkde/FindYourDreamHouseAI/issues) with detailed error logs and system information.
 

@@ -726,6 +726,6 @@ WHERE (now() - pg_stat_activity.query_start) > interval '5 minutes';
 ---
 
 **Database Version**: PostgreSQL 15+  
-**Last Updated**: 2025-01-07  
-**Maintainer**: Database Team (db-team@company.com)
+**Last Updated**: 10-28-2025  
+**Maintainer**: Berk Delibalta
 

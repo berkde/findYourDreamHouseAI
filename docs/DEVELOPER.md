@@ -1026,5 +1026,5 @@ public class UserService {
 
 ---
 
-**Need Help?** Check out our [FAQ](./FAQ.md) or [open an issue](https://github.com/your-org/FindYourDreamHouseAI/issues) for development support.
+**Need Help?** [open an issue](https://github.com/your-org/FindYourDreamHouseAI/issues) for development support.
 

@@ -1148,6 +1148,6 @@ curl -X POST http://localhost:8080/api/v1/houseAds/message \
 
 ---
 
-**API Version:** 1.0  
-**Last Updated:** 2025-01-07  
+**API Version:** 3.0  
+**Last Updated:** 10-28-2025  
 **Contact:** [Open an issue](https://github.com/your-org/FindYourDreamHouseAI/issues) for API support
