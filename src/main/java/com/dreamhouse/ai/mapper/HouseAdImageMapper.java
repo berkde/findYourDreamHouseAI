@@ -1,7 +1,7 @@
 package com.dreamhouse.ai.mapper;
 
 import com.dreamhouse.ai.house.dto.HouseAdImageDTO;
-import com.dreamhouse.ai.house.HouseAdImageEntity;
+import com.dreamhouse.ai.house.model.entity.HouseAdImageEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 

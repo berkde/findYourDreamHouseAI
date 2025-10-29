@@ -1,6 +1,6 @@
 package com.dreamhouse.ai.llm.tool;
 
-import com.dreamhouse.ai.cache.QueryKeyServiceImpl;
+import com.dreamhouse.ai.cache.service.impl.QueryKeyServiceImpl;
 import com.dreamhouse.ai.house.dto.HouseAdDTO;
 
 import com.dreamhouse.ai.house.dto.HouseAdImageDTO;

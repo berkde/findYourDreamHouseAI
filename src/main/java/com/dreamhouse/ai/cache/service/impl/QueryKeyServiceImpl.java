@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.cache;
+package com.dreamhouse.ai.cache.service.impl;
 
 import com.dreamhouse.ai.cache.service.QueryKeyService;
 import org.jetbrains.annotations.NotNull;

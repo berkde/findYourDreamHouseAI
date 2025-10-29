@@ -1,7 +1,6 @@
 package com.dreamhouse.ai.house.model.entity;
 
 import com.dreamhouse.ai.authentication.model.entity.UserEntity;
-import com.dreamhouse.ai.house.HouseAdImageEntity;
 import jakarta.persistence.*;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Index;

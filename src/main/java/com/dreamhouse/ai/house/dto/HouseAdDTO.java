@@ -1,6 +1,5 @@
 package com.dreamhouse.ai.house.dto;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;

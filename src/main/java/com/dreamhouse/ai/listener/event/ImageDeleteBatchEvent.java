@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.listener;
+package com.dreamhouse.ai.listener.event;
 
 import java.util.List;
 import java.util.Objects;

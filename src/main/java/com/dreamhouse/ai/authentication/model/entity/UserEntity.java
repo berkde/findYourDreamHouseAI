@@ -2,7 +2,6 @@ package com.dreamhouse.ai.authentication.model.entity;
 
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Pattern;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 

@@ -1,6 +1,5 @@
-package com.dreamhouse.ai.house;
+package com.dreamhouse.ai.house.model.entity;
 
-import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
 import jakarta.persistence.*;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;

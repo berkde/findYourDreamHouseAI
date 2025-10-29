@@ -1,6 +1,6 @@
 package com.dreamhouse.ai.llm.tool;
 
-import com.dreamhouse.ai.cache.QueryKeyServiceImpl;
+import com.dreamhouse.ai.cache.service.impl.QueryKeyServiceImpl;
 import com.dreamhouse.ai.llm.model.reply.ImageSearchReply;
 import com.dreamhouse.ai.llm.service.impl.ImageSimilaritySearchServiceImpl;
 import dev.langchain4j.agent.tool.Tool;

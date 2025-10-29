@@ -1,6 +1,7 @@
 package com.dreamhouse.ai.house.service.impl;
 
 import com.dreamhouse.ai.authentication.repository.UserRepository;
+import com.dreamhouse.ai.cache.service.impl.QueryKeyServiceImpl;
 import com.dreamhouse.ai.cloud.exception.EmptyFileException;
 import com.dreamhouse.ai.cloud.exception.NoFilesException;
 import com.dreamhouse.ai.cloud.exception.UnsupportedContentException;
@@ -9,9 +10,9 @@ import com.dreamhouse.ai.house.dto.HouseAdImageDTO;
 import com.dreamhouse.ai.house.dto.HouseAdMessageDTO;
 import com.dreamhouse.ai.house.exception.*;
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
-import com.dreamhouse.ai.house.HouseAdImageEntity;
+import com.dreamhouse.ai.house.model.entity.HouseAdImageEntity;
 import com.dreamhouse.ai.house.model.entity.HouseAdMessageEntity;
-import com.dreamhouse.ai.listener.ImageDeleteBatchEvent;
+import com.dreamhouse.ai.listener.event.ImageDeleteBatchEvent;
 import com.dreamhouse.ai.listener.event.ImageDeleteEvent;
 import com.dreamhouse.ai.house.model.request.CreateHouseAdRequestModel;
 import com.dreamhouse.ai.house.model.request.HouseAdMessageSendRequestModel;
@@ -26,7 +27,10 @@ import com.dreamhouse.ai.mapper.HouseAdMapper;
 import com.dreamhouse.ai.mapper.HouseAdMessageMapper;
 import io.micrometer.common.lang.Nullable;
 import org.apache.commons.compress.utils.Sets;
+import org.hibernate.exception.LockAcquisitionException;
 import org.jetbrains.annotations.NotNull;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,8 +50,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class HouseAdsServiceImpl implements HouseAdsService {
@@ -60,6 +66,8 @@ public class HouseAdsServiceImpl implements HouseAdsService {
     private final UserRepository userRepository;
     private final HouseAdMessageRepository houseAdMessageRepository;
     private final StorageService storageService;
+    private final RedissonClient redissonClient;
+    private final QueryKeyServiceImpl queryKeyService;
     private final HouseAdMapper houseMapper;
     private final HouseAdImageMapper houseImageMapper;
     private final HouseAdMessageMapper houseAdMessageMapper;
@@ -70,6 +78,8 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                                UserRepository userRepository,
                                HouseAdMessageRepository houseAdMessageRepository,
                                StorageService storageService,
+                               RedissonClient redissonClient,
+                               QueryKeyServiceImpl queryKeyService,
                                HouseAdMapper houseMapper,
                                HouseAdImageMapper houseImageMapper,
                                HouseAdMessageMapper houseAdMessageMapper,
@@ -78,6 +88,8 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         this.userRepository = userRepository;
         this.houseAdMessageRepository = houseAdMessageRepository;
         this.storageService = storageService;
+        this.redissonClient = redissonClient;
+        this.queryKeyService = queryKeyService;
         this.houseMapper = houseMapper;
         this.houseImageMapper = houseImageMapper;
         this.houseAdMessageMapper = houseAdMessageMapper;
@@ -93,6 +105,14 @@ public class HouseAdsServiceImpl implements HouseAdsService {
     @CacheEvict(value = {"houseAdsList", "houseAdsSearch"}, allEntries = true)
     @Override
     public HouseAdDTO createHouseAd(CreateHouseAdRequestModel createHouseAdRequestModel) {
+        final String lockKey = queryKeyService.lockKey("house-create", 1, createHouseAdRequestModel.title());
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            if (!lock.tryLock(2, 10, TimeUnit.SECONDS)) {
+                log.warn("HouseAd create request throttled for user: {}", lockKey);
+                throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
+            }
             log.info("Creating house ad with title: {}", createHouseAdRequestModel.title());
 
             var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -108,7 +128,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
             houseAd.setCity(createHouseAdRequestModel.city());
             houseAd.setUser(user);
 
-            if (createHouseAdRequestModel.images() != null){
+            if (createHouseAdRequestModel.images() != null) {
                 createHouseAdRequestModel.images()
                         .forEach(image -> {
                             var key = image.getStorageKey();
@@ -129,6 +149,18 @@ public class HouseAdsServiceImpl implements HouseAdsService {
 
             var savedHouseAd = houseAdRepository.saveAndFlush(houseAd);
             return houseMapper.apply(savedHouseAd);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("houseAd create interrupted for role: {}", lockKey);
+            throw new HouseAdMessageException("Interrupted");
+        } catch (Exception e) {
+            log.error("Error creating house ad ");
+            throw new HouseAdMessageException("Error creating house ad");
+        } finally {
+            if (lock.isHeldByCurrentThread())
+                lock.unlock();
+        }
     }
 
     /**
@@ -157,6 +189,15 @@ public class HouseAdsServiceImpl implements HouseAdsService {
     @CacheEvict(value = {"houseAds", "houseAdsList", "houseAdsSearch"}, key = "#updateHouseAdRequestModel.houseAdId()")
     @Override
     public HouseAdDTO updateHouseAdTitleAndDescription(UpdateHouseAdTitleAndDescriptionRequestModel updateHouseAdRequestModel) {
+        final String lockKey = queryKeyService.lockKey("house-update-images", 1, updateHouseAdRequestModel.houseAdId());
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            if (!lock.tryLock(2, 10, TimeUnit.SECONDS)) {
+                log.warn("HouseAd add update request throttled for user: {}", lockKey);
+                throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
+            }
+
             var house = houseAdRepository
                     .findByHouseAdUid(updateHouseAdRequestModel.houseAdId())
                     .orElseThrow(() ->
@@ -171,14 +212,25 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                 house.setDescription(updateHouseAdRequestModel.description());
             }
 
-        try {
             var savedHouseAdEntity = houseAdRepository.save(house);
             return houseMapper.apply(savedHouseAdEntity);
+
         } catch (HouseAdNotFoundException e) {
-            log.error("updateHouseAdTitleAndDescription - Error updating house ad title and description");
-            throw new HouseAdTitleAndDescriptionUpdateException("Error updating house ad title and description");
+                log.error("updateHouseAdTitleAndDescription - Error updating house ad title and description");
+                throw new HouseAdTitleAndDescriptionUpdateException("Error updating house ad title and description");
+        } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("houseAd update interrupted for role: {}", lockKey);
+                throw new HouseAdMessageException("Interrupted");
+        } catch (Exception e) {
+                log.error("Error updating house ad ");
+                throw new HouseAdMessageException("Error updating house ad");
+        } finally {
+                if (lock.isHeldByCurrentThread())
+                    lock.unlock();
         }
     }
+
 
     /**
      * Adds multiple images to a house advertisement.
@@ -197,74 +249,119 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         if (files == null || files.isEmpty())
             throw new NoFilesException("No files provided");
 
-        var ad = houseAdRepository.findByHouseAdUid(houseAdId)
-                    .orElseThrow(() -> new HouseAdNotFoundException("House ad not found"));
+        final String lockKey = queryKeyService.lockKey("house-add-images",1, houseAdId);
+        RLock lock = redissonClient.getLock(lockKey);
 
-        log.info("addHouseAdImages - houseAdId");
-
-        List<HouseAdImageEntity> entities = new ArrayList<>();
-        for (int i = 0; i < files.size(); i++) {
-            MultipartFile file = files.get(i);
-
-            if (file.isEmpty()) throw new EmptyFileException("Empty file: " + file.getOriginalFilename());
-
-            String content = Optional.ofNullable(file.getContentType()).orElse("");
-            if (!content.startsWith(ALTERNATIVE_FILE_NAME + "/")) {
-                throw new UnsupportedContentException("Unsupported content type");
+        try {
+            if (!lock.tryLock(2, 10, TimeUnit.SECONDS)) {
+                log.warn("HouseAd add image request throttled for user: {}", lockKey);
+                throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
             }
 
-            long maxBytes = 10 * 1024L * 1024L;
-            if(file.getSize() > maxBytes) throw new UnsupportedEncodingException("File size exceeds limit of 10MB");
+            var ad = houseAdRepository.findByHouseAdUid(houseAdId)
+                    .orElseThrow(() -> new HouseAdNotFoundException("House ad not found"));
 
-            var objectKey = OBJECT_KEY_PREFIX.formatted(
-                    houseAdId, UUID.randomUUID(), safeExtractFileName(file.getOriginalFilename()));
-            StoragePutResponse put = storageService
-                    .putObject(objectKey, file.getBytes(), content)
-                    .orElseThrow();
+            log.info("addHouseAdImages - houseAdId");
 
-            String thumbUrl = put.thumbnailUrl() != null ? put.thumbnailUrl() : put.url();
+            List<HouseAdImageEntity> entities = new ArrayList<>();
+            for (int i = 0; i < files.size(); i++) {
+                MultipartFile file = files.get(i);
+
+                if (file.isEmpty()) throw new EmptyFileException("Empty file: " + file.getOriginalFilename());
+
+                String content = Optional.ofNullable(file.getContentType()).orElse("");
+                if (!content.startsWith(ALTERNATIVE_FILE_NAME + "/")) {
+                    throw new UnsupportedContentException("Unsupported content type");
+                }
+
+                long maxBytes = 10 * 1024L * 1024L;
+                if (file.getSize() > maxBytes)
+                    throw new UnsupportedEncodingException("File size exceeds limit of 10MB");
+
+                var objectKey = OBJECT_KEY_PREFIX.formatted(
+                        houseAdId, UUID.randomUUID(), safeExtractFileName(file.getOriginalFilename()));
+                StoragePutResponse put = storageService
+                        .putObject(objectKey, file.getBytes(), content)
+                        .orElseThrow();
+
+                String thumbUrl = put.thumbnailUrl() != null ? put.thumbnailUrl() : put.url();
 
 
-            var img = new HouseAdImageEntity();
-            img.setHouseAdImageUid(UUID.randomUUID().toString());
-            img.setImageName(Optional.ofNullable(file.getOriginalFilename()).orElse(ALTERNATIVE_FILE_NAME));
-            img.setImageURL(put.url());
-            img.setImageType(content);
-            img.setImageThumbnail(thumbUrl);
-            img.setImageDescription(captions != null && i < captions.size() ? captions.get(i) : null);
-            img.setStorageKey(put.key());
-            ad.addImage(img);
-            entities.add(img);
-        }
+                var img = new HouseAdImageEntity();
+                img.setHouseAdImageUid(UUID.randomUUID().toString());
+                img.setImageName(Optional.ofNullable(file.getOriginalFilename()).orElse(ALTERNATIVE_FILE_NAME));
+                img.setImageURL(put.url());
+                img.setImageType(content);
+                img.setImageThumbnail(thumbUrl);
+                img.setImageDescription(captions != null && i < captions.size() ? captions.get(i) : null);
+                img.setStorageKey(put.key());
+                ad.addImage(img);
+                entities.add(img);
+            }
 
-        houseAdRepository.save(ad);
-        log.info("New Images added to the house Ad - houseAdId");
-        return entities
+            houseAdRepository.save(ad);
+            log.info("New Images added to the house Ad - houseAdId");
+            return entities
                     .stream()
                     .map(houseImageMapper)
                     .toList();
+
+        }  catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("houseAd add image interrupted for role: {}", lockKey);
+            throw new HouseAdMessageException("Interrupted");
+        } catch (Exception e) {
+            log.error("Error adding house ad image");
+            throw new HouseAdMessageException("Error adding house ad image");
+        } finally {
+            if (lock.isHeldByCurrentThread())
+                lock.unlock();
+        }
+
     }
 
     @CacheEvict(cacheNames = {"houseAds","houseAdsList","houseAdsSearch"}, allEntries = true)
     @Transactional
     @Override
     public boolean removeHouseAdImageAndObjectStore(String houseAdId, String imageUid) {
-        var houseAd = houseAdRepository
-                .findByHouseAdUid(houseAdId)
-                .orElseThrow(() -> new HouseAdNotFoundException("House ad not found"));
+        final String lockKey = queryKeyService.lockKey("house-remove-S3",1, houseAdId);
+        RLock lock = redissonClient.getLock(lockKey);
 
-        var img = houseAd.getImages().stream()
+        try {
+            if (!lock.tryLock(2, 10, TimeUnit.SECONDS)) {
+                log.warn("Delete houseAd  S3 image request throttled for user: {}", lockKey);
+                throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
+            }
+
+            var houseAd = houseAdRepository
+                    .findByHouseAdUid(houseAdId)
+                    .orElseThrow(() -> new HouseAdNotFoundException("House ad not found"));
+
+            var img = houseAd.getImages().stream()
                     .filter(image -> imageUid.equals(image.getHouseAdImageUid()))
                     .findFirst()
                     .orElseThrow(() -> new HouseAdNotFoundException("House ad image not found"));
 
-        var storageKey = img.getStorageKey();
-        houseAd.removeImage(img);
-        houseAdRepository.save(houseAd);
+            var storageKey = img.getStorageKey();
+            houseAd.removeImage(img);
+            houseAdRepository.save(houseAd);
 
-        if(storageKey != null && !storageKey.isBlank()){
-            publisher.publishEvent(new ImageDeleteEvent(storageKey));
+            if (storageKey != null && !storageKey.isBlank()) {
+                publisher.publishEvent(new ImageDeleteEvent(storageKey));
+            }
+
+        }  catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Delete houseAd S3 image interrupted for role: {}", lockKey);
+            throw new HouseAdMessageException("Interrupted");
+        } catch (Exception e) {
+            log.error("Error Deleting house ad S3 image");
+            throw new HouseAdMessageException("Error Deleting house ad S3 image");
+        } finally {
+            if (lock.isHeldByCurrentThread())
+                lock.unlock();
         }
+
 
         return Boolean.TRUE;
     }
@@ -307,22 +404,42 @@ public class HouseAdsServiceImpl implements HouseAdsService {
     @Transactional
     public Boolean deleteHouseAd(String houseAdId) {
         log.info("Deleting house ad");
-        var houseAdEntity = houseAdRepository
+        final String lockKey = queryKeyService.lockKey("house-delete",1, houseAdId);
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            if(!lock.tryLock(2,10, TimeUnit.SECONDS)) {
+                log.warn("Delete houseAd  request throttled for user: {}", lockKey);
+                throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
+            }
+
+            var houseAdEntity = houseAdRepository
                     .findByHouseAdUid(houseAdId)
                     .orElseThrow(() -> new HouseAdNotFoundException("House ad not found"));
 
-        var storageKeys = houseAdEntity.getImages()
-                        .stream()
-                        .filter(Objects::nonNull)
-                        .map(HouseAdImageEntity::getStorageKey)
-                        .distinct()
-                        .toList();
+            var storageKeys = houseAdEntity.getImages()
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .map(HouseAdImageEntity::getStorageKey)
+                    .distinct()
+                    .toList();
 
-        houseAdRepository.delete(houseAdEntity);
+            houseAdRepository.delete(houseAdEntity);
 
-        if(!storageKeys.isEmpty()) {
-            publisher.publishEvent(new ImageDeleteBatchEvent(storageKeys));
-            log.info("S3 House Ad images queued to be deleted");
+            if (!storageKeys.isEmpty()) {
+                publisher.publishEvent(new ImageDeleteBatchEvent(storageKeys));
+                log.info("S3 House Ad images queued to be deleted");
+            }
+        }  catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Delete houseAd  interrupted for role: {}", lockKey);
+            throw new HouseAdMessageException("Interrupted");
+        } catch (Exception e) {
+            log.error("Error Deleting house ad message");
+            throw new HouseAdMessageException("Error Deleting house ad message");
+        } finally {
+            if (lock.isHeldByCurrentThread())
+                lock.unlock();
         }
 
         return Boolean.TRUE;
@@ -336,6 +453,16 @@ public class HouseAdsServiceImpl implements HouseAdsService {
     @Transactional
     @Override
     public HouseAdMessageDTO sendHouseAdMessage(HouseAdMessageSendRequestModel requestModel) {
+        final String normalizedSenderName = requestModel.getSenderName().trim().toLowerCase();
+        final String lockKey = queryKeyService.lockKey("house-send-message",1, normalizedSenderName);
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            if(!lock.tryLock(2,10, TimeUnit.SECONDS)) {
+                log.warn("Send houseAd message request throttled for user: {}", normalizedSenderName);
+                throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
+            }
+
             var receiverHouseAd = houseAdRepository
                     .findByHouseAdUid(requestModel.getReceiverHouseAdUid())
                     .orElseThrow(() ->
@@ -352,13 +479,19 @@ public class HouseAdsServiceImpl implements HouseAdsService {
             message.setHouseAd(receiverHouseAd);
             receiverHouseAd.addMessage(message);
 
-        try {
             var savedMessage = houseAdMessageRepository.save(message);
             houseAdRepository.save(receiverHouseAd);
             return houseAdMessageMapper.apply(savedMessage);
+        }  catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Send houseAd message  interrupted for role: {}", normalizedSenderName);
+            throw new HouseAdMessageException("Interrupted");
         } catch (Exception e) {
             log.error("Error sending house ad message");
             throw new HouseAdMessageException("Error sending house ad message");
+        } finally {
+            if (lock.isHeldByCurrentThread())
+                lock.unlock();
         }
     }
 
