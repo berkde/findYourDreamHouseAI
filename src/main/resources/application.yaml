@@ -6,6 +6,16 @@ spring:
     virtual:
       enabled: true
 
+  task:
+    execution:
+      pool:
+        core-size: 8
+        max-size: 64
+        queue-capacity: 500
+    thread-pool: # for @Async
+      core-size: 8
+      max-size: 64
+
   datasource:
     driver-class-name: org.postgresql.Driver
     url: ${POSTGRESQL_URL}
@@ -14,9 +24,9 @@ spring:
     hikari:
       initialization-fail-timeout: 0
       connection-init-sql: SET application_name='FindYourDreamHouseAI'
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
+      maximum-pool-size: 16
+      minimum-idle: 4
+      connection-timeout: 5000
       idle-timeout: 300000
       max-lifetime: 900000
       leak-detection-threshold: 60000
@@ -81,11 +91,19 @@ management:
         region: ${AWS_REGION}
 
 server:
+  http2:
+    enabled: true
   shutdown: graceful
   compression:
     enabled: true
   tomcat:
-    connection-timeout: 120000
+    threads:
+      max: 400          # 8 cores × 50 is a safe rule of thumb
+      min-spare: 50
+    accept-count: 1000
+    max-connections: 10000
+    connection-timeout: 5000ms
+
 
 logging:
   level:
@@ -95,7 +113,7 @@ logging:
     com.dreamhouse.ai: INFO
     org.springframework.security: INFO
     org.springframework.web: INFO
-    dev.langchain4j: DEBUG
+#    dev.langchain4j: DEBUG
     com.zaxxer.hikari: DEBUG
   file:
     name: ${LOGS_FILE_LOCATION}
