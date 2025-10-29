@@ -11,6 +11,10 @@ public record AddressCreationRequestModel(
      @JsonProperty("billing_state") String billingState,
      @JsonProperty("billing_zip") String billingZip) {
     public AddressCreationRequestModel {
+        Objects.requireNonNull(billingStreet, "Street is required");
+        Objects.requireNonNull(billingCity, "City is required");
+        Objects.requireNonNull(billingState, "State is required");
+        Objects.requireNonNull(billingZip, "Zip is required");
     }
 
     @Override

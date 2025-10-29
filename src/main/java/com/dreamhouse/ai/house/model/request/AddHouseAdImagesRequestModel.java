@@ -7,6 +7,10 @@ import java.util.Objects;
 
 public record AddHouseAdImagesRequestModel(String houseAdId, List<HouseAdImageDTO> images) {
     public AddHouseAdImagesRequestModel {
+        Objects.requireNonNull(houseAdId, "House ad id is required");
+        Objects.requireNonNull(images, "Images is required");
+
+        images = List.copyOf(images);
     }
 
     @Override

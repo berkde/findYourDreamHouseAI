@@ -8,7 +8,7 @@
 </p>
 
 <h1 align="center">FindYourDreamHouseAI 🏠</h1>
-<p align="center">AI-powered house search & recommendations</p>
+<p align="center">AI-powered intelligent real estate search & recommendations</p>
 
 
 
@@ -17,15 +17,15 @@
 <p align="center">
 
   <!-- Core stack -->
-<a href="./pom.xml"><img src="https://img.shields.io/badge/Java-24-007396?logo=java&logoColor=white" alt="Java"/></a>
-<a href="./pom.xml"><img src="https://img.shields.io/badge/Spring%20Boot-3.5.x-6DB33F?logo=spring-boot&logoColor=white" alt="Spring Boot"/></a>
+<a href="./pom.xml"><img src="https://img.shields.io/badge/Java-22-007396?logo=java&logoColor=white" alt="Java"/></a>
+<a href="./pom.xml"><img src="https://img.shields.io/badge/Spring%20Boot-3.5.4-6DB33F?logo=spring-boot&logoColor=white" alt="Spring Boot"/></a>
 <a href="./pom.xml"><img src="https://img.shields.io/badge/Maven-Build-blue?logo=apache-maven&logoColor=white" alt="Maven"/></a>
 <a href="#"><img src="https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql&logoColor=white" alt="PostgreSQL"/></a>
 <a href="#"><img src="https://img.shields.io/badge/LangChain4j-AI%20Agent-0D96F6?logo=openai&logoColor=white" alt="LangChain4j"/></a>
-<a href="#"><img src="https://img.shields.io/badge/OpenAI-Embeddings-412991?logo=openai&logoColor=white" alt="OpenAI"/></a>
+<a href="#"><img src="https://img.shields.io/badge/Qwen-Local%20AI%20Model-FF6B35?logo=openai&logoColor=white" alt="Qwen"/></a>
 <a href="#"><img src="https://img.shields.io/badge/AWS-S3%20%7C%20Secrets%20Manager%20%7C CloudWatch-FF9900?logo=amazon-aws&logoColor=white" alt="AWS"/></a>
 <a href="#"><img src="https://img.shields.io/badge/Docker-Containerization-2496ED?logo=docker&logoColor=white" alt="Docker"/></a>
-<a href="#"><img src="https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?logo=githubactions&logoColor=white" alt="GitHub Actions"/></a>
+<a href="#"><img src="https://img.shields.io/badge/Redis-Caching-DC382D?logo=redis&logoColor=white" alt="Redis"/></a>
 <a href="#"><img src="https://img.shields.io/badge/Security-JWT%20%7C%20BCrypt-green?logo=keycloak&logoColor=white" alt="Security"/></a>
 <a href="#"><img src="https://img.shields.io/badge/Caffeine-Cache%20Layer-FFDD00?logo=coffeescript&logoColor=black" alt="Caffeine Cache"/></a>
 <a href="#"><img src="https://img.shields.io/badge/JUnit-Testing-25A162?logo=junit5&logoColor=white" alt="JUnit"/></a>
@@ -34,7 +34,7 @@
 </p>
 
 
-A modern, secure, and scalable Spring Boot 3 application for real estate management. Built with enterprise-grade security, AWS integration, and a comprehensive REST API for house advertisement management, user authentication, and messaging system.
+A cutting-edge AI-powered real estate platform that revolutionizes property search through intelligent image analysis, natural language processing, and vector similarity search using local Qwen models. Built with Spring Boot 3, this application combines traditional property management with advanced local AI capabilities to provide users with intelligent, context-aware property recommendations while maintaining complete data privacy.
 
 ## 🚀 Quick Start
 
@@ -57,6 +57,14 @@ mvn spring-boot:run
 
 ## ✨ Features
 
+### 🤖 AI-Powered Search & Recommendations
+- **Intelligent Image Search**: Upload property photos to find visually similar listings using Qwen Vision model
+- **Natural Language Queries**: Search properties using conversational language with LangChain4j AI agents
+- **Vector Similarity Search**: Advanced embedding-based property matching using Qwen embeddings and pgvector
+- **Smart Property Analysis**: AI-powered property feature extraction and description generation
+- **Context-Aware Recommendations**: Personalized suggestions based on user preferences and behavior
+- **Complete Data Privacy**: All AI processing happens locally with Qwen models
+
 ### 🔐 Authentication & Security
 - **JWT-based Authentication** with encrypted tokens (A256GCM)
 - **Role-based Access Control** (RBAC) with Spring Security 6
@@ -65,29 +73,40 @@ mvn spring-boot:run
 - **CORS configuration** for cross-origin requests
 
 ### 🏠 House Advertisement Management
-- **CRUD operations** for house listings
-- **Image upload and storage** via AWS S3
+- **CRUD operations** for house listings with rich metadata
+- **Image upload and storage** via AWS S3 with automatic resizing
 - **Presigned URLs** for secure image viewing
-- **Search functionality** by title and description
-- **Rich metadata** support for listings
+- **Advanced search functionality** by title, description, and AI-generated features
+- **Multi-image support** with thumbnail generation
+- **Property specifications** including beds, baths, price, location, and amenities
 
 ### 💬 Messaging System
 - **Real-time messaging** between users and property owners
 - **Message threading** per house advertisement
 - **Contact information** management
 - **Message history** and retrieval
+- **Email and phone integration** for direct communication
 
 ### ☁️ AWS Integration
 - **S3 storage** for image assets with server-side encryption
 - **AWS Secrets Manager** for secure configuration management
 - **Presigned URLs** for secure file access
 - **Regional configuration** support
+- **CloudWatch integration** for monitoring and metrics
 
 ### 🗄️ Database & Persistence
-- **PostgreSQL** with Spring Data JPA
+- **PostgreSQL** with Spring Data JPA and pgvector extension
 - **Automatic schema management** with Hibernate
 - **Connection pooling** with HikariCP
 - **Transaction management** and data integrity
+- **Vector embeddings** storage for AI-powered search
+
+### ⚡ Performance & Caching
+- **Multi-level caching** with Caffeine and Redis
+- **Query optimization** with distributed locking
+- **Request throttling** and rate limiting
+- **Image processing** with automatic resizing and compression
+- **Connection pooling** and database optimization
 
 ## 🏗️ Architecture
 
@@ -100,12 +119,24 @@ mvn spring-boot:run
                                                         │
                        ┌─────────────────┐              │
                        │   PostgreSQL    │◄─────────────┘
+                       │   + pgvector    │
                        │   Database      │
                        └─────────────────┘
                                 │
                        ┌─────────────────┐
                        │   AWS S3        │
                        │   (Images)      │
+                       └─────────────────┘
+                                │
+                       ┌─────────────────┐
+                       │   Qwen AI       │
+                       │   (Local Model) │
+                       │   Vision + LLM  │
+                       └─────────────────┘
+                                │
+                       ┌─────────────────┐
+                       │   Redis Cache   │
+                       │   + Caffeine    │
                        └─────────────────┘
 ```
 
@@ -121,21 +152,39 @@ com.dreamhouse.ai/
 │   ├── controller/         # House ad REST endpoints
 │   ├── service/           # House business logic
 │   └── model/             # House entities & DTOs
-└── llm/                   # AI/LLM integration (future)
+├── llm/                   # AI/LLM integration
+│   ├── controller/        # AI search endpoints
+│   ├── service/           # AI agents & tools
+│   ├── tool/              # LangChain4j tools
+│   └── model/             # AI request/response models
+├── cloud/                 # AWS integration
+│   ├── service/           # S3 & Secrets Manager
+│   └── configuration/     # AWS configs
+├── cache/                 # Caching layer
+│   ├── service/           # Cache implementations
+│   └── configuration/     # Cache configs
+└── mapper/                # Object mapping utilities
 ```
 
 ## 🛠️ Technology Stack
 
 | Component | Technology | Version | Purpose |
 |-----------|------------|---------|---------|
-| **Runtime** | Java | 24 | Application runtime |
-| **Framework** | Spring Boot | 3.5.x | Application framework |
+| **Runtime** | Java | 22 | Application runtime |
+| **Framework** | Spring Boot | 3.5.4 | Application framework |
 | **Security** | Spring Security | 6.5.2 | Authentication & authorization |
-| **Database** | PostgreSQL | Latest | Primary data store |
-| **ORM** | Spring Data JPA | 3.5.x | Data persistence |
-| **Cloud** | AWS SDK | 2.20.54 | S3 & Secrets Manager |
+| **Database** | PostgreSQL + pgvector | Latest | Primary data store + vector search |
+| **ORM** | Spring Data JPA | 3.5.4 | Data persistence |
+| **AI Framework** | LangChain4j | 0.35.0 | AI agent orchestration |
+| **AI Models** | Qwen Vision & LLM | Local | Image analysis & text generation |
+| **AI Embeddings** | Qwen Embeddings | Local | Vector similarity search |
+| **Cloud** | AWS SDK | 2.31.78 | S3, Secrets Manager, CloudWatch |
+| **Caching** | Redis + Caffeine | Redisson 3.36.0 + Caffeine 3.1.8 | Distributed + local caching |
 | **JWT** | JJWT | 0.12.6 | Token management |
 | **Mapping** | ModelMapper | 2.0.0 | Object mapping |
+| **Image Processing** | Thumbnailator | 0.4.20 | Image resizing & compression |
+| **Vector DB** | pgvector | 0.1.2 | Vector similarity search |
+| **Hibernate Vector** | hibernate-vector | 6.6.22.Final | Vector support for Hibernate |
 | **Build** | Maven | 3.9+ | Dependency management |
 
 
@@ -162,10 +211,12 @@ com.dreamhouse.ai/
 Before you begin, ensure you have the following installed and configured:
 
 ### Required Software
-- **Java 21+** (Java 24 recommended)
+- **Java 22** (as specified in pom.xml)
 - **Maven 3.9+** for dependency management
 - **PostgreSQL 12+** database server
+- **Redis 7.0+** for caching
 - **AWS CLI** (for configuration setup)
+- **Qwen AI Model** (local installation)
 
 ### AWS Requirements
 - **AWS Account** with appropriate permissions
@@ -234,7 +285,7 @@ git clone https://github.com/berkde/findYourDreamHouseAI.git
   cd FindYourDreamHouseAI
 
 # Verify Java version
-java -version  # Should be 21+
+java -version  # Should be 22
 
 # Verify Maven installation
 mvn -version  # Should be 3.9+
@@ -306,6 +357,85 @@ curl -X POST http://localhost:8080/login \
   }'
 ```
 
+## 🤖 AI Capabilities
+
+### Intelligent Image Search
+Upload property photos to find visually similar listings:
+
+```bash
+# Upload image for similarity search
+POST /api/v1/ai/similar
+Content-Type: multipart/form-data
+
+# Parameters:
+# - file: Image file (JPEG, PNG, WebP)
+# - k: Number of results (optional, default: 12)
+# - cityHint: City filter (optional)
+# - typeHint: Property type filter (optional)
+# - bedsHint: Bedroom count filter (optional)
+# - priceHint: Price range filter (optional)
+```
+
+**Response:**
+```json
+{
+  "inferredDescription": {
+    "style": "Modern",
+    "exterior": "Brick facade",
+    "stories": "2",
+    "bed_bath_hint": "3 bed, 2 bath",
+    "features": ["Garage", "Garden"],
+    "condition": "Excellent",
+    "notes": "Well-maintained property"
+  },
+  "results": [
+    {
+      "houseAdUid": "uuid",
+      "title": "Similar Modern House",
+      "price": 450000,
+      "address": "123 Main St",
+      "images": [...]
+    }
+  ],
+  "appliedHints": {
+    "city": "Boston",
+    "type": "House",
+    "beds": 3,
+    "price": 450000
+  }
+}
+```
+
+### Natural Language Search
+Search properties using conversational language:
+
+```bash
+# Natural language property search
+POST /api/v1/ai/search
+Content-Type: application/json
+
+{
+  "q": "I'm looking for a 3 bedroom house near Central Park in NYC under $500k"
+}
+```
+
+**Response:**
+```json
+{
+  "summary": "Found 15 properties matching your criteria",
+  "houseAdDTOS": [
+    {
+      "houseAdUid": "uuid",
+      "title": "Beautiful 3-Bedroom House",
+      "description": "Spacious family home...",
+      "price": 450000,
+      "address": "789 Pine Street, NYC",
+      "images": [...]
+    }
+  ]
+}
+```
+
 ## 📚 API Documentation
 
 The complete API documentation is available in [docs/API.md](./docs/API.md).
@@ -337,6 +467,15 @@ POST /api/v1/houseAds/{houseAdId}/images
 
 # Send message
 POST /api/v1/houseAds/message
+```
+
+**AI Search:**
+```bash
+# Natural language search
+POST /api/v1/ai/search
+
+# Image similarity search
+POST /api/v1/ai/similar
 ```
 
 
@@ -399,6 +538,9 @@ UserEntity (1) ──→ (N) HouseAdEntity
 **HouseAdEntity:**
 - `houseAdUid` (Primary Key)
 - `title`, `description`, `price`, `address`
+- `city`, `state`, `neighborhood`, `type`
+- `beds`, `baths`, `parking`, `petsAllowed`
+- `embedding` (Vector for AI similarity search)
 - `user` (Foreign Key to UserEntity)
 - `createdAt`, `updatedAt`
 
@@ -430,6 +572,15 @@ Image Metadata → Database Storage → Presigned URL Generation
 - **S3**: Image storage with server-side encryption (AES256)
 - **Secrets Manager**: Secure configuration management
 - **IAM**: Access control and permissions
+- **CloudWatch**: Application monitoring and metrics
+
+### AI Services Integration
+
+- **Qwen Vision Model**: Local property image analysis and feature extraction
+- **Qwen Embeddings**: Local vector generation for AI similarity search
+- **LangChain4j**: AI agent orchestration and tool management
+- **pgvector**: Vector similarity search in PostgreSQL
+- **Local Processing**: Complete data privacy with on-premises AI models
 
 ### Configuration Management
 
@@ -438,6 +589,16 @@ All sensitive configuration is stored in AWS Secrets Manager:
 - `region`: AWS region for services
 - `bucket_name`: S3 bucket for image storage
 - `basePath`: S3 object key prefix
+
+### AI Configuration
+
+Local AI services require additional environment variables:
+- `LLM_URL`: Qwen API base URL (local endpoint)
+- `LLM_NATIVE_BASE_URL`: Native LLM endpoint for local Qwen models
+- `AI_API_KEY`: API key for Qwen service (if required)
+- `LLM_MODEL`: Qwen model name (e.g., "qwen-vl-plus")
+- `LLM_TEMPERATURE`: Model temperature (0.0-1.0)
+- `LLM_EMBEDDING_MODEL`: Qwen embedding model name
 
 ## 🚨 Error Handling
 

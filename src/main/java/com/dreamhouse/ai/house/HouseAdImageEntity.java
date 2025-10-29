@@ -1,5 +1,6 @@
-package com.dreamhouse.ai.house.model.entity;
+package com.dreamhouse.ai.house;
 
+import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
 import jakarta.persistence.*;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
@@ -32,6 +33,9 @@ public class HouseAdImageEntity implements Serializable {
     @Column(name = "house_ad_image_uid", unique = true, nullable = false, length = 64)
     private String houseAdImageUid;
 
+    @Version
+    private Long version;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "house_ad_fk", nullable = false)
     private HouseAdEntity houseAd;
@@ -59,13 +63,26 @@ public class HouseAdImageEntity implements Serializable {
     @Column(name = "image_embedding", columnDefinition = "vector(512)")
     private float[] imageEmbedding;
 
-    public HouseAdImageEntity() {}
+    public HouseAdImageEntity() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getHouseAdImageUid() { return houseAdImageUid; }
     public void setHouseAdImageUid(String houseAdImageUid) { this.houseAdImageUid = houseAdImageUid; }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
 
     public HouseAdEntity getHouseAd() { return houseAd; }
     public void setHouseAd(HouseAdEntity houseAd) { this.houseAd = houseAd; }

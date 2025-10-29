@@ -21,9 +21,10 @@ Comprehensive database schema documentation for the FindYourDreamHouseAI applica
 
 ### Technology Stack
 
-- **Database**: PostgreSQL 15+
-- **ORM**: Hibernate 6.0+ (via Spring Data JPA)
+- **Database**: PostgreSQL 15+ with pgvector extension
+- **ORM**: Hibernate 6.6.22.Final (via Spring Data JPA)
 - **Connection Pool**: HikariCP
+- **Vector Search**: pgvector 0.1.2 for AI similarity search with Qwen embeddings
 - **Migration**: Flyway (optional)
 - **Schema Management**: Hibernate DDL Auto
 
@@ -192,6 +193,15 @@ CREATE TABLE house_ads (
     description TEXT,
     price DECIMAL(15,2),
     address VARCHAR(500),
+    city VARCHAR(100),
+    state VARCHAR(50),
+    neighborhood VARCHAR(100),
+    type VARCHAR(50),
+    beds INTEGER,
+    baths INTEGER,
+    parking BOOLEAN DEFAULT FALSE,
+    pets_allowed BOOLEAN DEFAULT FALSE,
+    embedding VECTOR(1536), -- OpenAI embedding vector
     user_uid UUID NOT NULL REFERENCES users(user_uid) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -201,7 +211,13 @@ CREATE TABLE house_ads (
 CREATE INDEX idx_house_ads_user_uid ON house_ads(user_uid);
 CREATE INDEX idx_house_ads_created_at ON house_ads(created_at);
 CREATE INDEX idx_house_ads_price ON house_ads(price);
+CREATE INDEX idx_house_ads_city ON house_ads(city);
+CREATE INDEX idx_house_ads_type ON house_ads(type);
+CREATE INDEX idx_house_ads_beds ON house_ads(beds);
 CREATE INDEX idx_house_ads_title ON house_ads USING gin(to_tsvector('english', title));
+
+-- Vector similarity search index
+CREATE INDEX idx_house_ads_embedding ON house_ads USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 
 -- Full-text search index
 CREATE INDEX idx_house_ads_search ON house_ads USING gin(
@@ -314,6 +330,74 @@ CREATE INDEX idx_user_roles_user_uid ON user_roles(user_uid);
 CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
 CREATE INDEX idx_role_authorities_role_id ON role_authorities(role_id);
 CREATE INDEX idx_role_authorities_authority_id ON role_authorities(authority_id);
+```
+
+## 🤖 AI & Vector Search
+
+### pgvector Extension Setup
+
+```sql
+-- Enable pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Verify extension installation
+SELECT * FROM pg_extension WHERE extname = 'vector';
+```
+
+### Vector Similarity Search
+
+The application uses Qwen embeddings (1536 dimensions) for intelligent property search:
+
+```sql
+-- Example vector similarity query
+SELECT house_ad_uid, title, price, 
+       1 - (embedding <=> '[0.1, 0.2, ...]'::vector) AS similarity
+FROM house_ads 
+WHERE embedding IS NOT NULL
+ORDER BY embedding <=> '[0.1, 0.2, ...]'::vector
+LIMIT 10;
+
+-- Cosine similarity search with filters
+SELECT * FROM house_ads
+WHERE embedding IS NOT NULL
+  AND city = 'Boston'
+  AND beds BETWEEN 2 AND 4
+ORDER BY embedding <=> '[0.1, 0.2, ...]'::vector
+LIMIT 20;
+```
+
+### Vector Index Optimization
+
+```sql
+-- Create optimized vector index for large datasets
+CREATE INDEX CONCURRENTLY idx_house_ads_embedding_hnsw 
+ON house_ads USING hnsw (embedding vector_cosine_ops) 
+WITH (m = 16, ef_construction = 64);
+
+-- For smaller datasets, use IVFFlat
+CREATE INDEX idx_house_ads_embedding_ivfflat 
+ON house_ads USING ivfflat (embedding vector_cosine_ops) 
+WITH (lists = 100);
+```
+
+### AI-Generated Property Features
+
+Properties can have AI-generated embeddings based on:
+- Image analysis (style, features, condition) using Qwen Vision
+- Text description analysis using Qwen LLM
+- Property specifications
+- Location and neighborhood data
+
+```sql
+-- Update property embedding
+UPDATE house_ads 
+SET embedding = '[0.1, 0.2, ...]'::vector
+WHERE house_ad_uid = 'uuid';
+
+-- Batch update embeddings
+UPDATE house_ads 
+SET embedding = ai_generate_embedding(title, description, city, type)
+WHERE embedding IS NULL;
 ```
 
 ## 🔍 Indexes

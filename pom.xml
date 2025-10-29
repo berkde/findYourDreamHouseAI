@@ -50,10 +50,14 @@
         <url/>
     </scm>
     <properties>
-        <java.version>21</java.version>
+        <java.version>24</java.version>
         <spring-modulith.version>1.4.1</spring-modulith.version>
         <spring-ai.version>1.0.3</spring-ai.version>
         <aws-version>2.31.78</aws-version>
+        <mapstruct-version>1.5.5.Final</mapstruct-version>
+        <maven-compiler-version>3.10.1</maven-compiler-version>
+        <jjwt-version>0.12.6</jjwt-version>
+        <model-mapper-version>2.0.0</model-mapper-version>
     </properties>
     <dependencies>
         <dependency>
@@ -89,7 +93,7 @@
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt</artifactId>
-            <version>0.12.6</version>
+            <version>${jjwt-version}</version>
         </dependency>
 
         <dependency>
@@ -107,7 +111,7 @@
         <dependency>
             <groupId>org.modelmapper</groupId>
             <artifactId>modelmapper</artifactId>
-            <version>2.0.0</version>
+            <version>${model-mapper-version}</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -256,13 +260,22 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven-compiler-version}</version>
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.springframework.boot</groupId>
                             <artifactId>spring-boot-configuration-processor</artifactId>
+                            <version>${project.parent.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct-version}</version>
                         </path>
                     </annotationProcessorPaths>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
                 </configuration>
             </plugin>
             <plugin>
@@ -272,22 +285,6 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
-                <configuration>
-                    <source>17</source>
-                    <target>17</target>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.mapstruct</groupId>
-                            <artifactId>mapstruct-processor</artifactId>
-                            <version>1.5.5.Final</version>
-                        </path>
-                    </annotationProcessorPaths>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>

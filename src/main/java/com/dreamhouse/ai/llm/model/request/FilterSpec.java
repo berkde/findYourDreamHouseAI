@@ -1,5 +1,6 @@
-package com.dreamhouse.ai.llm.model;
+package com.dreamhouse.ai.llm.model.request;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -54,7 +55,8 @@ public class FilterSpec {
     }
 
     public List<String> getNeighborhoods() {
-        return neighborhoods;
+        if (neighborhoods == null) return Collections.emptyList();
+        return List.copyOf(neighborhoods);
     }
 
     public void setNeighborhoods(List<String> neighborhoods) {
@@ -118,7 +120,8 @@ public class FilterSpec {
     }
 
     public List<String> getTypes() {
-        return types;
+        if (types == null) return Collections.emptyList();
+        return List.copyOf(types);
     }
 
     public void setTypes(List<String> types) {
@@ -158,12 +161,11 @@ public class FilterSpec {
     }
 
     public List<double[]> getPolygon() {
-        return polygon;
+        if (polygon == null) return Collections.emptyList();
+        return List.copyOf(polygon);
     }
 
-    public void setPolygon(List<double[]> polygon) {
-        this.polygon = polygon;
-    }
+    public void setPolygon(List<double[]> polygon) {this.polygon = polygon;}
 
     public Integer getMaxBeds() {
         return maxBeds;

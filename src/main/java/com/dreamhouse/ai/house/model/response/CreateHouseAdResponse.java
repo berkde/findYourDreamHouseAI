@@ -3,7 +3,10 @@ package com.dreamhouse.ai.house.model.response;
 import java.util.Objects;
 
 public record CreateHouseAdResponse(String houseAdId, String title) {
-    public CreateHouseAdResponse {}
+    public CreateHouseAdResponse {
+        Objects.requireNonNull(houseAdId, "House Ad ID is required");
+        Objects.requireNonNull(title, "Title is required");
+    }
 
     @Override
     public boolean equals(Object o) {

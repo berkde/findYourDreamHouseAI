@@ -9,17 +9,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpStatus;
+import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
 
 @RestController
 @RequestMapping("/api/v1/ai")
+@Validated
 public class AiController {
     private static final Logger log = LoggerFactory.getLogger(AiController.class);
     private final HouseSearchAgent houseSearchAgent;
@@ -38,12 +44,16 @@ public class AiController {
         this.aiUtil = aiUtil;
     }
 
+    @WriteOperation
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @PostMapping("/search")
     public ResponseEntity<HouseSearchReply> search(@RequestBody Map<String, String> body) {
         String query = body.getOrDefault("q", "");
         return ResponseEntity.ok(houseSearchAgent.chat(query));
     }
 
+    @WriteOperation
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @PostMapping("/similar")
     public ResponseEntity<?> similar(
             @RequestPart("file") MultipartFile file,

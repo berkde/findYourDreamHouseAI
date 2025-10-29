@@ -9,12 +9,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
+import java.util.*;
 
 import static java.util.stream.Collectors.toList;
 
@@ -52,13 +50,13 @@ public class User implements UserDetails {
                 .map(SimpleGrantedAuthority::new)
                 .collect(toList());
 
-        System.out.println("Authorities: " + authorities);
+        log.info("Authorities: {}", authorities);
 
         if (authorities.isEmpty()) {
             log.warn("User {} has no valid authorities", userEntity.getUsername());
         }
         
-        return authorities;
+        return List.copyOf(authorities);
     }
 
     @Override
@@ -89,7 +87,11 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return Boolean.TRUE;
+        if(userEntity.getAccountLockedUntil() == null && userEntity.getFailedLoginAttempts() < 5 ) {
+            return Boolean.TRUE;
+        } else  {
+            return userEntity.getAccountLockedUntil().isBefore(LocalDateTime.now());
+        }
     }
 
     @Override

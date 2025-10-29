@@ -38,6 +38,10 @@ public class AuthorityEntity implements Serializable {
     private Set<RoleEntity> roles;
 
     public AuthorityEntity() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
     }
 
     public Long getId() {

@@ -1,15 +1,6 @@
 package com.dreamhouse.ai.authentication.model.entity;
 
-import jakarta.persistence.Cacheable;
-import jakarta.persistence.Table;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Index;
-import jakarta.persistence.UniqueConstraint;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
 
@@ -43,6 +34,9 @@ public class AddressEntity implements Serializable {
     @Column(name = "address_id", unique = true)
     private String addressID;
 
+    @Version
+    private Long version;
+
     @Column(nullable = false) private String street;
     @Column(nullable = false) private String city;
     @Column(nullable = false) private String state;
@@ -51,12 +45,27 @@ public class AddressEntity implements Serializable {
     @OneToOne(mappedBy = "billingAddress")
     private UserEntity billedUser;
 
+    public AddressEntity() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
+    }
+
     public String getAddressID() {
         return addressID;
     }
 
     public void setAddressID(String addressID) {
         this.addressID = addressID;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public String getStreet() {

@@ -83,8 +83,8 @@ lsof -i :8080
 
 1. **Java Version Mismatch:**
    ```bash
-   # Ensure Java 21+ is installed
-   export JAVA_HOME=/path/to/java21
+   # Ensure Java 22 is installed
+   export JAVA_HOME=/path/to/java22
    java -version
    ```
 
@@ -664,6 +664,82 @@ grep "hasRole\|hasAuthority" src/main/java/com/dreamhouse/ai/authentication/conf
        .requestMatchers("/api/v1/houseAds/create").hasRole("USER")
        .requestMatchers("/api/v1/auth/authority/edit").hasRole("ADMIN")
    )
+   ```
+
+## 🤖 AI Service Issues
+
+### Qwen Model Connection Problems
+
+**Symptoms:**
+- AI search endpoints returning 500 errors
+- "Connection refused" errors in logs
+- Timeout errors when calling AI services
+
+**Diagnostics:**
+```bash
+# Check if Qwen service is running
+curl http://localhost:11434/api/tags
+
+# Verify model availability
+curl http://localhost:11434/api/show -d '{"name": "qwen-vl-plus"}'
+
+# Test embedding endpoint
+curl http://localhost:11434/api/embeddings -d '{"model": "qwen-turbo", "input": "test"}'
+```
+
+**Solutions:**
+
+1. **Qwen Service Not Running:**
+   ```bash
+   # Start Qwen service (adjust path as needed)
+   ./qwen-server --model qwen-vl-plus --port 11434
+   
+   # Or using Docker
+   docker run -p 11434:11434 qwen/qwen-vl-plus
+   ```
+
+2. **Model Not Found:**
+   ```bash
+   # Download required models
+   ./qwen-server --model qwen-vl-plus --download
+   
+   # List available models
+   curl http://localhost:11434/api/tags
+   ```
+
+3. **Memory Issues:**
+   ```bash
+   # Check available memory
+   free -h
+   
+   # Monitor memory usage
+   htop
+   
+   # Consider using smaller models or increasing swap
+   sudo fallocate -l 8G /swapfile
+   sudo chmod 600 /swapfile
+   sudo mkswap /swapfile
+   sudo swapon /swapfile
+   ```
+
+4. **Configuration Issues:**
+   ```bash
+   # Verify environment variables
+   echo $LLM_URL
+   echo $LLM_MODEL
+   echo $LLM_EMBEDDING_MODEL
+   
+   # Check application logs
+   tail -f logs/application.log | grep -i "qwen\|ai\|llm"
+   ```
+
+5. **Performance Optimization:**
+   ```bash
+   # Use GPU acceleration if available
+   ./qwen-server --model qwen-vl-plus --gpu-layers 32
+   
+   # Reduce context length for faster processing
+   export LLM_MAX_TOKENS=2048
    ```
 
 ## ⚡ Performance Issues

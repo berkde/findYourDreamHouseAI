@@ -11,7 +11,7 @@ public class RedissonConfiguration {
     @Bean
     public RedissonClient redissonClient() {
         Config config = new Config();
-        config.useSingleServer().setAddress(System.getenv("REDIS_ADDRESS"));
+        config.useSingleServer().setAddress(System.getenv("REDIS_SERVER"));
         return Redisson.create(config);
     }
 }

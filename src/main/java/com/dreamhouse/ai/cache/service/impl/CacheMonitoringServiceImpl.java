@@ -26,6 +26,10 @@ public class CacheMonitoringServiceImpl implements CacheMonitoringService {
         this.cacheManager = cacheManager;
     }
 
+
+    /**
+     * Logs statistics for all caches in the system.
+     */
     @Scheduled(fixedRate = 300000)
     @Override
     public void logCacheStatistics() {
@@ -55,6 +59,11 @@ public class CacheMonitoringServiceImpl implements CacheMonitoringService {
         log.info("=== End Cache Statistics Report ===");
     }
 
+    /**
+     * Retrieves statistics for a specific cache.
+     * @param cacheName the name of the cache to get statistics for
+     * @return Map containing cache statistics
+     */
     @Override
     public Map<String, Object> getCacheStatistics(String cacheName) {
         CaffeineCache cache = (CaffeineCache) cacheManager.getCache(cacheName);
@@ -78,6 +87,9 @@ public class CacheMonitoringServiceImpl implements CacheMonitoringService {
         );
     }
 
+    /**
+     * Clears all caches in the system.
+     */
     @Override
     public void clearAllCaches() {
         log.info("Clearing all caches...");
@@ -87,6 +99,10 @@ public class CacheMonitoringServiceImpl implements CacheMonitoringService {
         });
     }
 
+    /**
+     * Clears a specific cache by name.
+     * @param cacheName the name of the cache to clear
+     */
     @Override
     public void clearCache(String cacheName) {
         var cache = cacheManager.getCache(cacheName);

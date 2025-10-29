@@ -47,6 +47,10 @@ public class HouseAdMessageEntity implements Serializable {
     private HouseAdEntity houseAd;
 
     public HouseAdMessageEntity() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
     }
 
     public Long getId() {

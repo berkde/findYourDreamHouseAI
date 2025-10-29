@@ -14,6 +14,7 @@ Complete API documentation for the FindYourDreamHouseAI backend service.
 - [House Advertisement Management](#-house-advertisement-management)
 - [Image Management](#-image-management)
 - [Messaging System](#-messaging-system)
+- [AI Search & Analysis](#-ai-search--analysis)
 - [Data Models](#-data-models)
 - [Error Handling](#-error-handling)
 - [Rate Limiting](#-rate-limiting)
@@ -753,6 +754,189 @@ Retrieve all messages for a specific house advertisement.
 - `401 Unauthorized` - Invalid or missing token
 - `403 Forbidden` - Insufficient permissions
 - `404 Not Found` - House ad not found
+
+## 🤖 AI Search & Analysis
+
+### Natural Language Property Search
+
+Search properties using conversational language with AI-powered query understanding.
+
+**Endpoint:** `POST /api/v1/ai/search`  
+**Authentication:** None (Public)  
+**Content-Type:** `application/json`
+
+**Request Body:**
+```json
+{
+  "q": "I'm looking for a 3 bedroom house near Central Park in NYC under $500k"
+}
+```
+
+**Response:**
+```json
+{
+  "summary": "Found 15 properties matching your criteria",
+  "houseAdDTOS": [
+    {
+      "houseAdUid": "880e8400-e29b-41d4-a716-446655440003",
+      "title": "Beautiful 3-Bedroom House",
+      "description": "Spacious family home with garden and garage",
+      "price": 450000,
+      "address": "789 Pine Street, NYC, NY 10001",
+      "city": "NYC",
+      "state": "NY",
+      "beds": 3,
+      "baths": 2,
+      "type": "House",
+      "user": {
+        "userUid": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "johndoe",
+        "name": "John",
+        "lastname": "Doe"
+      },
+      "images": [
+        {
+          "houseAdImageUid": "990e8400-e29b-41d4-a716-446655440004",
+          "imageName": "front-view.jpg",
+          "imageUrl": "https://s3.amazonaws.com/bucket/house-ads/880e8400-e29b-41d4-a716-446655440003/990e8400-e29b-41d4-a716-446655440004.jpg",
+          "imageDescription": "Front view of the house",
+          "imageType": "image/jpeg",
+          "imageThumbnail": "https://s3.amazonaws.com/bucket/thumbnails/house-ads/880e8400-e29b-41d4-a716-446655440003/990e8400-e29b-41d4-a716-446655440004.jpg",
+          "viewUrl": "https://s3.amazonaws.com/bucket/presigned-url",
+          "storageKey": "house-ads/880e8400-e29b-41d4-a716-446655440003/990e8400-e29b-41d4-a716-446655440004.jpg"
+        }
+      ],
+      "createdAt": "2025-01-07T10:30:00Z",
+      "updatedAt": "2025-01-07T10:30:00Z"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+- `200 OK` - Search completed successfully
+- `400 Bad Request` - Invalid search query
+- `500 Internal Server Error` - AI service error
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:8080/api/v1/ai/search \
+  -H "Content-Type: application/json" \
+  -d '{
+    "q": "I need a 2 bedroom apartment in Boston under $300k"
+  }'
+```
+
+### Intelligent Image Similarity Search
+
+Upload property photos to find visually similar listings using AI-powered image analysis with local Qwen Vision model.
+
+**Endpoint:** `POST /api/v1/ai/similar`  
+**Authentication:** None (Public)  
+**Content-Type:** `multipart/form-data`
+
+**Form Data:**
+- `file` (file, required) - Image file (JPEG, PNG, WebP, max 10MB)
+- `k` (integer, optional) - Number of results to return (default: 12, max: 50)
+- `cityHint` (string, optional) - City filter for results
+- `typeHint` (string, optional) - Property type filter (House, Apartment, Condo, etc.)
+- `bedsHint` (integer, optional) - Bedroom count filter
+- `priceHint` (number, optional) - Price range filter (will search ±15% range)
+
+**Response:**
+```json
+{
+  "inferredDescription": {
+    "style": "Modern",
+    "exterior": "Brick facade with large windows",
+    "stories": "2",
+    "bed_bath_hint": "3 bed, 2 bath",
+    "features": ["Garage", "Garden", "Balcony"],
+    "condition": "Excellent",
+    "notes": "Well-maintained property with modern amenities"
+  },
+  "results": [
+    {
+      "houseAdUid": "aa0e8400-e29b-41d4-a716-446655440007",
+      "title": "Modern 3-Bedroom House",
+      "description": "Contemporary home with brick exterior and modern finishes",
+      "price": 425000,
+      "address": "456 Oak Avenue, Boston, MA 02101",
+      "city": "Boston",
+      "state": "MA",
+      "beds": 3,
+      "baths": 2,
+      "type": "House",
+      "user": {
+        "userUid": "550e8400-e29b-41d4-a716-446655440000",
+        "username": "johndoe",
+        "name": "John",
+        "lastname": "Doe"
+      },
+      "images": [
+        {
+          "houseAdImageUid": "bb0e8400-e29b-41d4-a716-446655440008",
+          "imageName": "exterior.jpg",
+          "imageUrl": "https://s3.amazonaws.com/bucket/house-ads/aa0e8400-e29b-41d4-a716-446655440007/bb0e8400-e29b-41d4-a716-446655440008.jpg",
+          "imageDescription": "Modern brick exterior",
+          "imageType": "image/jpeg",
+          "imageThumbnail": "https://s3.amazonaws.com/bucket/thumbnails/house-ads/aa0e8400-e29b-41d4-a716-446655440007/bb0e8400-e29b-41d4-a716-446655440008.jpg",
+          "viewUrl": "https://s3.amazonaws.com/bucket/presigned-url",
+          "storageKey": "house-ads/aa0e8400-e29b-41d4-a716-446655440007/bb0e8400-e29b-41d4-a716-446655440008.jpg"
+        }
+      ],
+      "createdAt": "2025-01-07T09:15:00Z",
+      "updatedAt": "2025-01-07T09:15:00Z"
+    }
+  ],
+  "appliedHints": {
+    "city": "Boston",
+    "type": "House",
+    "beds": 3,
+    "price": 425000
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK` - Image analysis and search completed successfully
+- `400 Bad Request` - Invalid file format or size
+- `413 Payload Too Large` - File exceeds size limit
+- `415 Unsupported Media Type` - Invalid file type
+- `500 Internal Server Error` - AI service error
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:8080/api/v1/ai/similar \
+  -F "file=@/path/to/property-photo.jpg" \
+  -F "k=10" \
+  -F "cityHint=Boston" \
+  -F "typeHint=House" \
+  -F "bedsHint=3" \
+  -F "priceHint=400000"
+```
+
+### AI Search Features
+
+**Supported Image Formats:**
+- JPEG (.jpg, .jpeg)
+- PNG (.png)
+- WebP (.webp)
+
+**AI Analysis Capabilities:**
+- Property style identification (Modern, Traditional, Victorian, etc.) using Qwen Vision
+- Exterior features detection (Brick, Wood, Stone, etc.)
+- Building characteristics (Stories, Bed/Bath estimation)
+- Property features recognition (Garage, Garden, Pool, etc.)
+- Condition assessment (Excellent, Good, Fair, etc.)
+- Complete local processing for data privacy
+
+**Search Optimization:**
+- Automatic image resizing and compression
+- Vector embedding generation for similarity matching
+- Multi-criteria filtering with hints
+- Distributed caching for performance
+- Request throttling and rate limiting
 
 ## 📊 Data Models
 

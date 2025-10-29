@@ -1,6 +1,7 @@
 package com.dreamhouse.ai.house.model.entity;
 
 import com.dreamhouse.ai.authentication.model.entity.UserEntity;
+import com.dreamhouse.ai.house.HouseAdImageEntity;
 import jakarta.persistence.*;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Index;
@@ -30,6 +31,9 @@ public class HouseAdEntity implements Serializable {
 
     @Column(name = "house_ad_uid", nullable = false, unique = true, length = 64)
     private String houseAdUid;
+
+    @Version
+    private Long version;
     
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -89,7 +93,12 @@ public class HouseAdEntity implements Serializable {
     @OrderBy("messageDate DESC")
     private Set<HouseAdMessageEntity> messages = new LinkedHashSet<>();
 
-    public HouseAdEntity() {}
+    public HouseAdEntity() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
+    }
 
     public HouseAdEntity(String houseAdUid,
                          UserEntity user,
@@ -163,7 +172,15 @@ public class HouseAdEntity implements Serializable {
 
     public String getHouseAdUid() { return houseAdUid; }
     public void setHouseAdUid(String houseAdUid) { this.houseAdUid = houseAdUid; }
-    
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
     public UserEntity getUser() { return user; }
     public void setUser(UserEntity user) { this.user = user; }
 

@@ -1,16 +1,24 @@
 package com.dreamhouse.ai.llm.tool;
 
-import com.dreamhouse.ai.llm.model.ImageSearchResult;
+import com.dreamhouse.ai.cache.QueryKeyServiceImpl;
+import com.dreamhouse.ai.llm.model.reply.ImageSearchReply;
 import com.dreamhouse.ai.llm.service.impl.ImageSimilaritySearchServiceImpl;
 import dev.langchain4j.agent.tool.Tool;
+import org.hibernate.exception.LockAcquisitionException;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.sql.SQLException;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class ImageSearchTool {
@@ -19,9 +27,16 @@ public class ImageSearchTool {
     private static final List<String> ALLOWED_MIME = List.of("image/jpeg", "image/jpg", "image/png", "image/webp");
 
     private final ImageSimilaritySearchServiceImpl imageSimilaritySearchService;
+    private final ConcurrentHashMap<String, CompletableFuture<Map<String, Object>>> inflight = new ConcurrentHashMap<>();
+    private final QueryKeyServiceImpl queryKeyService;
+    private final RedissonClient redissonClient;
 
-    public ImageSearchTool(ImageSimilaritySearchServiceImpl imageSimilaritySearchService) {
+    public ImageSearchTool(ImageSimilaritySearchServiceImpl imageSimilaritySearchService,
+                           QueryKeyServiceImpl queryKeyService,
+                           RedissonClient redissonClient) {
         this.imageSimilaritySearchService = imageSimilaritySearchService;
+        this.queryKeyService = queryKeyService;
+        this.redissonClient = redissonClient;
     }
 
     @Tool("Find similar house ads given a base64 image of a property. Returns inferred JSON description and similar ads.")
@@ -33,59 +48,89 @@ public class ImageSearchTool {
             String typeHint,
             Integer bedsHint,
             Double priceHint
-    ) {
+    ) throws InterruptedException {
+
+        String lockKey = queryKeyService.lockKey(
+                "image-search", 1,
+                base64Image, mime, k, cityHint, typeHint, bedsHint, priceHint
+        );
+
+        RLock lock = redissonClient.getLock(lockKey);
+
         try {
-            if (base64Image == null || base64Image.isBlank()) {
-                return Map.of("error", "MISSING_IMAGE_DATA");
+            if (!lock.tryLock(1, 5, TimeUnit.SECONDS)) {
+                throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
             }
 
-            String raw = base64Image;
-            String effectiveMime = mime;
-            String suggestedFilename = "uploaded-image";
+            CompletableFuture<Map<String, Object>> houseSearchReply = inflight.computeIfAbsent(lockKey, __ ->
+                    CompletableFuture.supplyAsync(() -> {
 
-            if (base64Image.startsWith("data:") && base64Image.contains(";base64,")) {
-                int semi = base64Image.indexOf(";base64,");
-                effectiveMime = base64Image.substring(5, semi);
-                raw = base64Image.substring(semi + ";base64,".length());
-                suggestedFilename = "image-from-data-url";
-            }
+                        if (base64Image == null || base64Image.isBlank()) {
+                            return Map.of("error", "MISSING_IMAGE_DATA");
+                        }
 
-            if (effectiveMime == null || effectiveMime.isBlank()) {
-                effectiveMime = "image/jpeg";
-            }
-            String finalEffectiveMime = effectiveMime;
-            if (ALLOWED_MIME.stream().noneMatch(m -> m.equalsIgnoreCase(finalEffectiveMime))) {
-                return Map.of("error", "UNSUPPORTED_MIME", "mime", effectiveMime);
-            }
+                        String raw = base64Image;
+                        String effectiveMime = mime;
+                        String suggestedFilename = "uploaded-image";
 
-            byte[] bytes = Base64.getDecoder().decode(raw);
-            if (bytes.length == 0 || bytes.length > MAX_IMAGE_BYTES) {
-                return Map.of("error", "INVALID_IMAGE_SIZE", "bytes", bytes.length);
-            }
+                        if (base64Image.startsWith("data:") && base64Image.contains(";base64,")) {
+                            int semi = base64Image.indexOf(";base64,");
+                            effectiveMime = base64Image.substring(5, semi);
+                            raw = base64Image.substring(semi + ";base64,".length());
+                            suggestedFilename = "image-from-data-url";
+                        }
 
-            MultipartFile file = new BytesMultipartFile("file", suggestedFilename, effectiveMime, bytes);
+                        if (effectiveMime == null || effectiveMime.isBlank()) {
+                            effectiveMime = "image/jpeg";
+                        }
+                        String finalEffectiveMime = effectiveMime;
+                        if (ALLOWED_MIME.stream().noneMatch(m -> m.equalsIgnoreCase(finalEffectiveMime))) {
+                            return Map.of("error", "UNSUPPORTED_MIME", "mime", effectiveMime);
+                        }
 
-            ImageSearchResult r = imageSimilaritySearchService.searchByImage(
-                    file, k, cityHint, typeHint, bedsHint, priceHint
+                        byte[] bytes = Base64.getDecoder().decode(raw);
+                        if (bytes.length == 0 || bytes.length > MAX_IMAGE_BYTES) {
+                            return Map.of("error", "INVALID_IMAGE_SIZE", "bytes", bytes.length);
+                        }
+
+                        MultipartFile file = new BytesMultipartFile("file", suggestedFilename, effectiveMime, bytes);
+
+                        ImageSearchReply r = imageSimilaritySearchService.searchByImage(
+                                file, k, cityHint, typeHint, bedsHint, priceHint
+                        );
+
+
+
+                        return Map.of(
+                                "inferredDescription", r.inferredDescription(),
+                                "appliedHints", Map.of(
+                                        "city", cityHint,
+                                        "type", typeHint,
+                                        "bedsHint", bedsHint,
+                                        "priceHint", priceHint
+                                ),
+                                "results", r.results()
+                        );
+
+                    })
             );
 
-            return Map.of(
-                    "inferredDescription", r.inferredDescription(),
-                    "appliedHints", Map.of(
-                            "city", cityHint,
-                            "type", typeHint,
-                            "bedsHint", bedsHint,
-                            "priceHint", priceHint
-                    ),
-                    "results", r.results()
-            );
+            try {
+                return houseSearchReply.join();
+            } finally {
+                inflight.remove(lockKey, houseSearchReply);
+            }
 
-        } catch (IllegalArgumentException badBase64) {
-            return Map.of("error", "INVALID_BASE64_IMAGE");
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
         } catch (Exception e) {
             return Map.of("error", "IMAGE_SEARCH_FAILED", "details", e.getMessage());
+        } finally {
+            if (lock.isHeldByCurrentThread()) lock.unlock();
         }
     }
+
 
 
     static final class BytesMultipartFile implements MultipartFile {

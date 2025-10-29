@@ -1,7 +1,7 @@
 # Developer Guide
 
-[![Java](https://img.shields.io/badge/Java-24-007396?logo=java)](#)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.x-6DB33F?logo=spring-boot)](#)
+[![Java](https://img.shields.io/badge/Java-22-007396?logo=java)](#)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.4-6DB33F?logo=spring-boot)](#)
 [![Maven](https://img.shields.io/badge/Maven-3.9+-blue?logo=apache-maven)](#)
 
 Comprehensive developer documentation for the FindYourDreamHouseAI project.
@@ -23,10 +23,12 @@ Comprehensive developer documentation for the FindYourDreamHouseAI project.
 
 ### Prerequisites
 
-- **Java 24** (or Java 21+)
+- **Java 22** (as specified in pom.xml)
 - **Maven 3.9+**
 - **PostgreSQL 12+**
 - **AWS CLI** (for AWS integration)
+- **Redis** (for caching)
+- **Qwen AI Model** (local installation)
 - **IDE** (IntelliJ IDEA, Eclipse, or VS Code)
 - **Git**
 
@@ -41,8 +43,8 @@ Comprehensive developer documentation for the FindYourDreamHouseAI project.
    ```
 
 2. **Configure Java SDK:**
-   - File → Project Structure → Project → Project SDK → Java 24
-   - File → Project Structure → Modules → Language Level → 24
+   - File → Project Structure → Project → Project SDK → Java 22
+   - File → Project Structure → Modules → Language Level → 22
 
 3. **Maven Configuration:**
    - File → Settings → Build → Build Tools → Maven
@@ -66,7 +68,7 @@ Comprehensive developer documentation for the FindYourDreamHouseAI project.
 2. **Configure Java:**
    - Open Command Palette (Ctrl+Shift+P)
    - Type "Java: Configure Java Runtime"
-   - Set Java 24 as the default
+   - Set Java 22 as the default
 
 ### Local Development Environment
 
@@ -86,11 +88,42 @@ Comprehensive developer documentation for the FindYourDreamHouseAI project.
      -p 5432:5432 \
      -d postgres:15
    
+   # Enable pgvector extension
+   docker exec -it postgres-dev psql -U dev_user -d findyourdreamhouse_dev -c "CREATE EXTENSION IF NOT EXISTS vector;"
+   
    # Or install PostgreSQL locally
    createdb findyourdreamhouse_dev
+   psql findyourdreamhouse_dev -c "CREATE EXTENSION IF NOT EXISTS vector;"
    ```
 
-3. **AWS Configuration:**
+3. **Redis Setup:**
+   ```bash
+   # Using Docker
+   docker run --name redis-dev \
+     -p 6379:6379 \
+     -d redis:7-alpine
+   
+   # Or install Redis locally
+   brew install redis  # macOS
+   sudo apt-get install redis-server  # Ubuntu
+   ```
+
+4. **AI Configuration:**
+   ```bash
+   # Set Qwen API endpoint (local)
+   export LLM_URL="http://localhost:11434"  # or your Qwen service URL
+   export LLM_NATIVE_BASE_URL="http://localhost:11434"
+   
+   # Configure Qwen models
+   export LLM_MODEL="qwen-vl-plus"  # or your preferred Qwen model
+   export LLM_EMBEDDING_MODEL="qwen-turbo"  # or your embedding model
+   export LLM_TEMPERATURE="0.7"
+   
+   # Optional: API key if your Qwen service requires authentication
+   export AI_API_KEY="your-qwen-api-key"
+   ```
+
+5. **AWS Configuration:**
    ```bash
    # Configure AWS credentials
    aws configure
@@ -113,7 +146,7 @@ Comprehensive developer documentation for the FindYourDreamHouseAI project.
      --secret-string "dev/"
    ```
 
-4. **Run Application:**
+6. **Run Application:**
    ```bash
    # Development profile
    mvn spring-boot:run -Dspring-boot.run.profiles=dev
@@ -165,7 +198,21 @@ src/main/java/com/dreamhouse/ai/
 │   ├── model/                         # House domain models
 │   ├── repository/                    # House repositories
 │   └── service/                       # House services
-└── llm/                               # AI/LLM integration (future)
+├── llm/                               # AI/LLM integration
+│   ├── controller/                   # AI search endpoints
+│   ├── service/                      # AI agents & tools
+│   │   ├── agent/                    # LangChain4j agents
+│   │   └── impl/                     # Service implementations
+│   ├── tool/                         # LangChain4j tools
+│   ├── model/                        # AI request/response models
+│   └── util/                         # AI utilities
+├── cloud/                            # AWS integration
+│   ├── service/                      # S3 & Secrets Manager
+│   └── configuration/                # AWS configs
+├── cache/                            # Caching layer
+│   ├── service/                      # Cache implementations
+│   └── configuration/                # Cache configs
+└── mapper/                           # Object mapping utilities
 ```
 
 ### Module Organization
@@ -174,7 +221,9 @@ The project follows **Spring Modulith** principles:
 
 - **authentication**: User management, security, and authentication
 - **house**: House advertisement management and related features
-- **llm**: AI/LLM integration (planned for future)
+- **llm**: AI/LLM integration with LangChain4j agents and tools
+- **cloud**: AWS services integration (S3, Secrets Manager)
+- **cache**: Multi-level caching with Redis and Caffeine
 
 Each module is self-contained with its own:
 - Controllers

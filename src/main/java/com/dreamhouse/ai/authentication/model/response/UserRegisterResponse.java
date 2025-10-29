@@ -3,7 +3,12 @@ package com.dreamhouse.ai.authentication.model.response;
 import java.util.Objects;
 
 public record UserRegisterResponse(String userID, String username, String name, String lastname) {
-    public UserRegisterResponse {}
+    public UserRegisterResponse {
+        Objects.requireNonNull(userID, "UserID is required");
+        Objects.requireNonNull(username, "Username is required");
+        Objects.requireNonNull(name, "Name is required");
+        Objects.requireNonNull(lastname, "Last name is required");
+    }
 
     @Override
     public boolean equals(Object o) {

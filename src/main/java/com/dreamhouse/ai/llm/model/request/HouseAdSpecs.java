@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.llm.model;
+package com.dreamhouse.ai.llm.model.request;
 
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
 import jakarta.persistence.criteria.JoinType;

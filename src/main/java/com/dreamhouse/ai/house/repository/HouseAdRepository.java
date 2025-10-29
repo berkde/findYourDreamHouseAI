@@ -1,7 +1,6 @@
 package com.dreamhouse.ai.house.repository;
 
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
-import com.dreamhouse.ai.llm.model.FilterSpec;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

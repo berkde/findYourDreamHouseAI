@@ -48,7 +48,6 @@ public class StorageServiceImpl implements StorageService {
         this.secretId = secretId;
     }
 
-    @Transactional
     @Override
     public Optional<String> presignedGetUrl(String key, Duration expiry) {
         try {
@@ -64,8 +63,8 @@ public class StorageServiceImpl implements StorageService {
             GetObjectRequest getReq = GetObjectRequest.builder()
                     .bucket(bucket)
                     .key(key)
-                     .responseContentType("image/jpeg")      // optional: force headers
-                     .responseContentDisposition("inline")    // optional: ensure inline display
+                    .responseContentType("image/jpeg")
+                    .responseContentDisposition("inline")
                     .build();
 
             log.info("presignedGetUrl getReq = {}", getReq);

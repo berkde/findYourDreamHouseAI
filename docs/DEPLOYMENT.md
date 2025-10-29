@@ -41,7 +41,7 @@ Comprehensive deployment guide for the FindYourDreamHouseAI application.
 
 ```dockerfile
 # Multi-stage build for optimized image
-FROM openjdk:24-jdk-slim as builder
+FROM openjdk:22-jdk-slim as builder
 
 # Set working directory
 WORKDIR /app
@@ -61,7 +61,7 @@ COPY src src
 RUN ./mvnw clean package -DskipTests
 
 # Production stage
-FROM openjdk:24-jre-slim
+FROM openjdk:22-jre-slim
 
 # Install necessary packages
 RUN apt-get update && apt-get install -y \

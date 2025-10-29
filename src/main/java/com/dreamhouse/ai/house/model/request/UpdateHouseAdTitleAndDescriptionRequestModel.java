@@ -9,6 +9,9 @@ public record UpdateHouseAdTitleAndDescriptionRequestModel(
         String description) {
 
     public UpdateHouseAdTitleAndDescriptionRequestModel {
+        Objects.requireNonNull(houseAdId, "House Ad ID is required");
+        Objects.requireNonNull(title, "Title is required");
+        Objects.requireNonNull(description, "Description is required");
     }
 
     @Override

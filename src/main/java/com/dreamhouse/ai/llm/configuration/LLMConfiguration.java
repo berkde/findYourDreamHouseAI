@@ -21,18 +21,18 @@ import java.util.Objects;
 
 @Configuration
 @EnableConfigurationProperties({LLMProperties.class})
-public class AiConfiguration {
+public class LLMConfiguration {
 
     @Bean(name = "qwenChatModel")
     @Primary
-    public ChatLanguageModel qwenChatModel(LLMProperties llmProperties) {
-        String model = Objects.requireNonNull(llmProperties.model(), "llm.model is null").trim();
+    public ChatLanguageModel qwenChatModel(LLMProperties properties) {
+        String model = Objects.requireNonNull(properties.model(), "llm.model is null").trim();
         if (model.isEmpty()) throw new IllegalStateException("llm.model is blank");
 
         return OllamaChatModel.builder()
-                .baseUrl(llmProperties.nativeBaseUrl())
-                .modelName(System.getenv("LLM_MODEL"))
-                .temperature(llmProperties.temperature())
+                .baseUrl(properties.nativeBaseUrl())
+                .modelName(properties.model())
+                .temperature(properties.temperature())
                 .timeout(Duration.ofMinutes(3))
                 .logRequests(Boolean.TRUE)
                 .logResponses(Boolean.TRUE)
@@ -63,7 +63,5 @@ public class AiConfiguration {
                 .timeout(Duration.ofMinutes(3))
                 .build();
     }
-
-
 
 }

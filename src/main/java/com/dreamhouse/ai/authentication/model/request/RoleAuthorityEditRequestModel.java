@@ -10,6 +10,11 @@ public record RoleAuthorityEditRequestModel(@JsonProperty("role_name") String ro
                                             @JsonProperty("authorities") List<String> authorities,
                                             @JsonProperty("operation") String operation) {
     public RoleAuthorityEditRequestModel {
+        Objects.requireNonNull(roleName, "Role name is required");
+        Objects.requireNonNull(authorities, "Authorities is required");
+        Objects.requireNonNull(operation, "Operation is required");
+
+        authorities = List.copyOf(authorities);
     }
 
     @Override

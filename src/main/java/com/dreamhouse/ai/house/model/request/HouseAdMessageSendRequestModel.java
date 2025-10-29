@@ -14,6 +14,10 @@ public class HouseAdMessageSendRequestModel {
     private String receiverHouseAdUid;
 
     public HouseAdMessageSendRequestModel() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
     }
 
     public String getSubject() {

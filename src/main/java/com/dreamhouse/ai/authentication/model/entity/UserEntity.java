@@ -1,29 +1,15 @@
 package com.dreamhouse.ai.authentication.model.entity;
 
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
-import jakarta.persistence.Cacheable;
-import jakarta.persistence.Table;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Index;
-import jakarta.persistence.OneToOne;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Temporal;
-import jakarta.persistence.TemporalType;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.OneToMany;
 
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
@@ -47,6 +33,9 @@ public class UserEntity implements Serializable {
     @Column(name = "users_id", unique = true, nullable = false)
     private String userID;
 
+    @Version
+    private Long version;
+
     @Column(unique = true, nullable = false)
     private String username;
 
@@ -64,6 +53,12 @@ public class UserEntity implements Serializable {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "last_password_update")
     private Date lastPasswordUpdate;
+
+    @Column(name = "failed_login_attempts")
+    private Integer failedLoginAttempts = 0;
+
+    @Column(name = "account_locked_until")
+    private LocalDateTime accountLockedUntil;
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "billing_address_id", unique = true)
@@ -87,6 +82,10 @@ public class UserEntity implements Serializable {
     private List<HouseAdEntity> houseAds = new ArrayList<>();
 
     public UserEntity() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
     }
 
     public Long getId() { return id; }
@@ -99,6 +98,14 @@ public class UserEntity implements Serializable {
 
     public void setUserID(String userID) {
         this.userID = userID;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public String getUsername() {
@@ -134,6 +141,7 @@ public class UserEntity implements Serializable {
     }
 
     public Set<RoleEntity> getRoles() {
+        if  (roles == null) return Collections.emptySet();
         return roles;
     }
 
@@ -174,6 +182,22 @@ public class UserEntity implements Serializable {
         this.lastPasswordUpdate = lastPasswordUpdate;
     }
 
+    public Integer getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    public void setFailedLoginAttempts(Integer failedLoginAttempts) {
+        this.failedLoginAttempts = failedLoginAttempts;
+    }
+
+    public LocalDateTime getAccountLockedUntil() {
+        return accountLockedUntil;
+    }
+
+    public void setAccountLockedUntil(LocalDateTime accountLockedUntil) {
+        this.accountLockedUntil = accountLockedUntil;
+    }
+
     public AddressEntity getBillingAddress() {
         return billingAddress;
     }
@@ -182,6 +206,14 @@ public class UserEntity implements Serializable {
         this.billingAddress = billingAddress;
     }
 
+    public List<HouseAdEntity> getHouseAds() {
+        if (houseAds == null) return Collections.emptyList();
+        return houseAds;
+    }
+
+    public void setHouseAds(List<HouseAdEntity> houseAds) {
+        this.houseAds = houseAds;
+    }
 
     public void addHouseAd(HouseAdEntity houseAd) {
         if (houseAd == null) return;

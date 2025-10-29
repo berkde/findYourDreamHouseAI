@@ -7,14 +7,18 @@ import com.dreamhouse.ai.authentication.util.SecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
+import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 
 @RestController
 @RequestMapping("/api/v1/user")
+@Validated
 public class UserProfileController {
     private final UserServiceImpl userService;
     private final SecurityUtil securityUtil;
@@ -26,6 +30,23 @@ public class UserProfileController {
         this.securityUtil = securityUtil;
     }
 
+    @WriteOperation
+    @PostMapping("/{userId}/address")
+    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    public ResponseEntity<String> addOrUpdateBillingAddress(@PathVariable("userId") String userId,
+                                                            @RequestBody AddressCreationRequestModel model,
+                                                            @AuthenticationPrincipal String username) {
+        if (securityUtil.isUserRequestValid(userId, username) == Boolean.FALSE) {
+            return ResponseEntity.badRequest().body(null);
+        }
+
+        log.info("Adding billing and shipping address");
+        var isAddressAdded = userService.addOrUpdateBillingAddress(userId, model);
+        return isAddressAdded == Boolean.TRUE ? ResponseEntity.ok("Address added/updated") :
+                ResponseEntity.badRequest().body("Address not added/updated");
+    }
+
+    @ReadOperation
     @GetMapping(path = "/{userId}")
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     public ResponseEntity<UserDTO> getUserProfile(@PathVariable("userId") String userId,
@@ -39,18 +60,4 @@ public class UserProfileController {
         return ResponseEntity.ok(userProfile);
     }
 
-    @PostMapping("/{userId}/address")
-    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
-    public ResponseEntity<String> addOrUpdateBillingAddress(@PathVariable("userId") String userId,
-                                                             @RequestBody AddressCreationRequestModel model,
-                                                             @AuthenticationPrincipal String username) {
-        if (securityUtil.isUserRequestValid(userId, username) == Boolean.FALSE) {
-            return ResponseEntity.badRequest().body(null);
-        }
-
-        log.info("Adding billing and shipping address");
-        var isAddressAdded = userService.addOrUpdateBillingAddress(userId, model);
-        return isAddressAdded == Boolean.TRUE ? ResponseEntity.ok("Address added/updated") :
-                                                ResponseEntity.badRequest().body("Address not added/updated");
-    }
 }

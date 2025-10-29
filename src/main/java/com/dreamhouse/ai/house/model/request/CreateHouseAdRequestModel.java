@@ -12,6 +12,13 @@ public record CreateHouseAdRequestModel(
         List<HouseAdImageDTO> images) {
 
     public CreateHouseAdRequestModel {
+        Objects.requireNonNull(title, "Title is required");
+        Objects.requireNonNull(description, "Description is required");
+        Objects.requireNonNull(city, "City is required");
+
+        if(images != null) {
+            images = List.copyOf(images);
+        }
     }
 
     @Override

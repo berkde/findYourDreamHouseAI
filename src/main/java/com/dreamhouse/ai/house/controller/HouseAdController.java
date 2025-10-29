@@ -8,6 +8,7 @@ import com.dreamhouse.ai.house.model.request.HouseAdMessageSendRequestModel;
 import com.dreamhouse.ai.house.model.request.UpdateHouseAdTitleAndDescriptionRequestModel;
 import com.dreamhouse.ai.house.service.impl.HouseAdsServiceImpl;
 import com.dreamhouse.ai.cloud.service.impl.StorageServiceImpl;
+import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,6 +30,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/houseAds")
+@Validated
 public class HouseAdController {
     private static final Logger log = LoggerFactory.getLogger(HouseAdController.class);
     private final HouseAdsServiceImpl houseAdsService;
@@ -70,7 +73,7 @@ public class HouseAdController {
     )
     public ResponseEntity<List<HouseAdImageDTO>> uploadImages(
             @PathVariable String houseAdId,
-            @RequestParam("files") List<MultipartFile> files,
+            @RequestParam("files") @Valid List<MultipartFile> files,
             @RequestParam(value = "captions", required = false) List<String> captions) throws IOException {
         log.info("uploadImages - houseAdId={}, files={}", houseAdId, files.size());
         var dtos = houseAdsService.addHouseAdImages(houseAdId, files, captions);
@@ -97,6 +100,15 @@ public class HouseAdController {
         return ResponseEntity.ok(dtos);
     }
 
+
+    @DeleteOperation
+    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    @DeleteMapping("/{houseAdUid}")
+    public ResponseEntity<Boolean> deleteHouseAd(@PathVariable("houseAdUid") String houseAdUid) {
+        log.info("deleteHouseAd - Deleting house ad: {}", houseAdUid);
+        var success = houseAdsService.deleteHouseAd(houseAdUid);
+        return ResponseEntity.ok().body(success);
+    }
 
 
     @DeleteOperation
@@ -126,16 +138,6 @@ public class HouseAdController {
         var houseAds = houseAdsService.getAllHouseAds();
         return ResponseEntity.ok().body(houseAds);
     }
-
-    @DeleteOperation
-    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
-    @DeleteMapping("/houseAdId")
-    public ResponseEntity<Boolean> deleteHouseAd(@RequestParam String houseAdUid) {
-        log.info("deleteHouseAd - Deleting house ad: {}", houseAdUid);
-        var success = houseAdsService.deleteHouseAd(houseAdUid);
-        return ResponseEntity.ok().body(success);
-    }
-
 
     @WriteOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")

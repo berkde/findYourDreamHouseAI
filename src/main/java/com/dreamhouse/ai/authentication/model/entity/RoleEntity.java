@@ -1,19 +1,10 @@
 package com.dreamhouse.ai.authentication.model.entity;
 
-import jakarta.persistence.Table;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.ManyToMany;
-import jakarta.persistence.JoinTable;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.CascadeType;
+import jakarta.persistence.*;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.Set;
 
 @Entity
@@ -26,6 +17,9 @@ public class RoleEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(unique = true, nullable = false)
     private Long id;
+
+    @Version
+    private Long version;
 
     @Column(unique = true, nullable = false)
     private String name;
@@ -43,6 +37,10 @@ public class RoleEntity implements Serializable {
 
 
     public RoleEntity() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
     }
 
     public Long getId() {
@@ -51,6 +49,14 @@ public class RoleEntity implements Serializable {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public String getName() {
@@ -70,6 +76,7 @@ public class RoleEntity implements Serializable {
     }
 
     public Set<AuthorityEntity> getAuthorities() {
+        if (authorities == null) return Collections.emptySet();
         return authorities;
     }
 

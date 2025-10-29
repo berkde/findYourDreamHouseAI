@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
 
 public class HouseSearchReply implements Serializable {
@@ -18,10 +19,15 @@ public class HouseSearchReply implements Serializable {
     private String summary;
 
     public HouseSearchReply() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
     }
 
     public List<HouseAdDTO> getHouseAdDTOS() {
-        return houseAdDTOS;
+        if  (houseAdDTOS == null) return Collections.emptyList();
+        return List.copyOf(houseAdDTOS);
     }
 
     public void setHouseAdDTOS(List<HouseAdDTO> houseAdDTOS) {

@@ -25,6 +25,7 @@ services:
     volumes:
       - postgresql:/var/lib/postgresql/data
 
+
   redis:
     image: redis:7.0
     ports:
