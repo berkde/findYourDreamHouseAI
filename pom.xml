@@ -50,7 +50,7 @@
         <url/>
     </scm>
     <properties>
-        <java.version>24</java.version>
+        <java.version>25</java.version>
         <spring-modulith.version>1.4.1</spring-modulith.version>
         <spring-ai.version>1.0.3</spring-ai.version>
         <aws-version>2.31.78</aws-version>
@@ -198,7 +198,7 @@
         <dependency>
             <groupId>ai.djl.huggingface</groupId>
             <artifactId>tokenizers</artifactId>
-            <version>0.27.0</version>
+            <version>0.32.0</version>
         </dependency>
         <dependency>
             <groupId>dev.langchain4j</groupId>
@@ -276,6 +276,10 @@
                     </annotationProcessorPaths>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <compilerArgs>
+                        <arg>--module-path</arg>
+                        <arg>--enable-preview</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
             <plugin>
