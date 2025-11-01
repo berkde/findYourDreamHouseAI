@@ -5,10 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 
 @Configuration
 public class PerformanceConfiguration {
@@ -34,15 +31,17 @@ public class PerformanceConfiguration {
         return ex;
     }
 
-    @Bean("deduplicationExecutor")
-    public Executor deduplicationExecutor() {
+
+    @Bean("storageExecutor")
+    public Executor storageExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(8);
         executor.setMaxPoolSize(32);
         executor.setQueueCapacity(1000);
-        executor.setThreadNamePrefix("dedup-");
+        executor.setThreadNamePrefix("storage-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
     }
+
 }
