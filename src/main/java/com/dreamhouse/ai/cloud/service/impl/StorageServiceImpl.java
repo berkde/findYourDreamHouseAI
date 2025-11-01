@@ -59,7 +59,7 @@ public class StorageServiceImpl implements StorageService {
                               @Value("${security.jwt.secret-id}") String secretId,
                               RedissonClient redissonClient,
                               QueryKeyServiceImpl queryKeyService,
-                              @Qualifier("deduplicationExecutor") Executor executor,
+                              @Qualifier("storageExecutor") Executor executor,
                               ConcurrentHashMap<String, CompletableFuture<String>> storageInflight
                               ) {
         this.s3Client = s3Client;
