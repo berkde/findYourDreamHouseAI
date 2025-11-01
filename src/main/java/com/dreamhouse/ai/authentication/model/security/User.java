@@ -36,15 +36,15 @@ public class User implements UserDetails {
 
         var authorities = roles.stream()
                 .flatMap(role -> {
-                    var stream = new ArrayList<String>();
+                    var grants = new ArrayList<String>();
 
-                    stream.add(role.getName());
+                    grants.add(role.getName());
                     if (role.getAuthorities() != null) {
                         role.getAuthorities().stream()
                                 .map(AuthorityEntity::getName)
-                                .forEach(stream::add);
+                                .forEach(grants::add);
                     }
-                    return stream.stream();
+                    return grants.stream();
                 })
                 .distinct()
                 .map(SimpleGrantedAuthority::new)
@@ -57,6 +57,11 @@ public class User implements UserDetails {
         }
         
         return List.copyOf(authorities);
+    }
+
+
+    public Long getId() {
+        return userEntity.getId();
     }
 
     @Override
