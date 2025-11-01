@@ -57,7 +57,7 @@ curl -s http://localhost:11434/api/generate -d '{
 
 
 # === BUILD THE APP ===
-mvn clean install package
+mvn clean install package -U
 
 # === RUN THE APP ===
 echo "Starting FindYourDreamHouseAI on port 8080..."
