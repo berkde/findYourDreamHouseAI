@@ -35,8 +35,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class HouseSearchTool {
     private static final Logger log = LoggerFactory.getLogger(HouseSearchTool.class);
-    private static final Integer MAX_PAGE_SIZE = 1_000;
-    private static final Integer QUERY_LIMIT = 50;
+    private static final Integer MAX_PAGE_SIZE = 100;
     private static final String SORT_PROPERTY = "price";
     private static final Integer PAGE_NUMBER = 0;
     private final StorageServiceImpl storageService;
@@ -99,7 +98,8 @@ public class HouseSearchTool {
 
                                 List<HouseAdDTO> houseAdDTOS = repository
                                         .findAll(spec, pageRequest)
-                                        .stream()
+                                        .getContent()
+                                        .parallelStream()
                                         .map(entity -> {
                                             var houseAdImageDTOs = entity.getImages()
                                                     .stream()
@@ -115,7 +115,6 @@ public class HouseSearchTool {
                                             dto.setImages(houseAdImageDTOs);
                                             return dto;
                                         })
-                                        .limit(QUERY_LIMIT)
                                         .toList();
 
                                 var reply = new HouseSearchReply();
