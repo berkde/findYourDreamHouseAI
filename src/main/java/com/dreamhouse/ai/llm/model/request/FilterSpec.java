@@ -16,6 +16,10 @@ public class FilterSpec {
     public List<double[]> polygon;
 
     public FilterSpec() {
+        /*
+            This constructor has been intentionally left empty for
+            object marshalling and serialization motives
+        */
     }
     public FilterSpec(String city, String state, List<String> neighborhoods, Double minPrice, Double maxPrice, Boolean hasParking, Integer minBeds, Integer maxBeds, Integer minBaths, Integer minSqft, Integer maxSqft, Integer minYearBuilt, List<String> types, Boolean parking, Boolean petsAllowed, Boolean waterfront, String keywords, List<double[]> polygon) {
         this.city = city;
