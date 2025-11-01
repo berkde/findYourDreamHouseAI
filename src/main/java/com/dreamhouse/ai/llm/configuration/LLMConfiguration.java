@@ -4,16 +4,18 @@ import com.dreamhouse.ai.llm.service.agent.HouseSearchAgent;
 import com.dreamhouse.ai.llm.service.agent.ImageSearchAgent;
 import com.dreamhouse.ai.llm.tool.HouseSearchTool;
 import com.dreamhouse.ai.llm.tool.ImageSearchTool;
+import dev.langchain4j.memory.chat.ChatMemoryProvider;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
 import dev.langchain4j.service.AiServices;
 
 
+import dev.langchain4j.store.memory.chat.ChatMemoryStore;
+import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.*;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -61,6 +63,20 @@ public class LLMConfiguration {
                 .baseUrl(llmProperties.nativeBaseUrl())
                 .modelName(llmProperties.embeddingModelName())
                 .timeout(Duration.ofMinutes(3))
+                .build();
+    }
+
+    @Bean
+    public ChatMemoryStore chatMemoryStore() {
+        return new InMemoryChatMemoryStore();
+    }
+
+    @Bean("houseChatMemoryProvider")
+    public ChatMemoryProvider houseChatMemoryProvider(ChatMemoryStore store) {
+        return sessionId -> new MessageWindowChatMemory.Builder()
+                .id(sessionId != null ? sessionId : "anonymous")
+                .maxMessages(20)
+                .chatMemoryStore(store)
                 .build();
     }
 
