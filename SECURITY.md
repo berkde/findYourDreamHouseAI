@@ -157,7 +157,7 @@ We maintain tests and validation to reduce regressions:
 
 ## Rewards & Acknowledgements
 
-We appreciate responsible disclosure. At this time we do not offer a formal bug bounty. We will acknowledge researchers who follow responsible disclosure and opt-in to public recognition. Contact security@findyourdreamhouse.ai to discuss recognition.
+We appreciate responsible disclosure. At this time we do not offer a formal bug bounty. We will acknowledge researchers who follow responsible disclosure and opt-in to public recognition. Contact berkdelibalta@gmail.com to discuss recognition.
 
 ---
 
