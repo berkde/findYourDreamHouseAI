@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.llm.service.agent;
+package com.dreamhouse.ai.llm.agent;
 
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
