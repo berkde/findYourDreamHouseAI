@@ -7,7 +7,7 @@ import com.dreamhouse.ai.house.repository.HouseAdRepository;
 import com.dreamhouse.ai.cloud.service.impl.StorageServiceImpl;
 import com.dreamhouse.ai.llm.model.request.FilterSpec;
 import com.dreamhouse.ai.llm.model.request.HouseAdSpecs;
-import com.dreamhouse.ai.llm.model.reply.HouseSearchReply;
+import com.dreamhouse.ai.llm.dto.HouseSearchDTO;
 import com.dreamhouse.ai.mapper.HouseAdImageMapper;
 import com.dreamhouse.ai.mapper.HouseAdMapper;
 import dev.langchain4j.agent.tool.Tool;
@@ -42,7 +42,7 @@ public class HouseSearchTool {
     private final HouseAdRepository repository;
     private final HouseAdImageMapper houseAdImageMapper;
     private final HouseAdMapper houseAdMapper;
-    private final ConcurrentHashMap<String, CompletableFuture<HouseSearchReply>> houseSearchInflight;
+    private final ConcurrentHashMap<String, CompletableFuture<HouseSearchDTO>> houseSearchInflight;
     private final RedissonClient redissonClient;
     private final QueryKeyServiceImpl  queryKeyService;
     private final Executor executor;
@@ -54,7 +54,7 @@ public class HouseSearchTool {
                            HouseAdMapper houseAdMapper,
                            RedissonClient redissonClient,
                            QueryKeyServiceImpl queryKeyService,
-                           ConcurrentHashMap<String, CompletableFuture<HouseSearchReply>> houseSearchInflight,
+                           ConcurrentHashMap<String, CompletableFuture<HouseSearchDTO>> houseSearchInflight,
                            @Qualifier("houseSearchExecutor") Executor executor) {
         this.repository = repository;
         this.storageService = storageService;
@@ -68,7 +68,7 @@ public class HouseSearchTool {
 
     @Tool("Search the database for houses matching the given filters")
     @PerformanceSensitive
-    public HouseSearchReply searchHouses(FilterSpec filterSpec) throws InterruptedException {
+    public HouseSearchDTO searchHouses(FilterSpec filterSpec) throws InterruptedException {
         String lockKey = queryKeyService.lockKey(
                 "house-search", 1,
                 filterSpec.getCity(),
@@ -90,7 +90,7 @@ public class HouseSearchTool {
                 throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
             }
 
-            CompletableFuture<HouseSearchReply> houseSearchReply = houseSearchInflight.computeIfAbsent(lockKey, __ ->
+            CompletableFuture<HouseSearchDTO> houseSearchReply = houseSearchInflight.computeIfAbsent(lockKey, __ ->
                     CompletableFuture.supplyAsync(() -> {
                                 log.info("Searching for houses matching the given filters");
                                 var spec = HouseAdSpecs.byFilter(filterSpec);
@@ -107,7 +107,7 @@ public class HouseSearchTool {
                                                         var dto = houseAdImageMapper.apply(image);
                                                         dto.setViewUrl(storageService
                                                                 .presignedGetUrl(image.getStorageKey(), Duration.ofDays(7))
-                                                                .orElseThrow());
+                                                                .orElse("undefined"));
                                                         return dto;
                                                     })
                                                     .toList();
@@ -117,7 +117,7 @@ public class HouseSearchTool {
                                         })
                                         .toList();
 
-                                var reply = new HouseSearchReply();
+                                var reply = new HouseSearchDTO();
                                 reply.setHouseAdDTOS(houseAdDTOS);
                                 return reply;
                             },executor)
