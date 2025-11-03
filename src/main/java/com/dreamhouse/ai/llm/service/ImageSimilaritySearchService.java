@@ -1,7 +1,7 @@
 package com.dreamhouse.ai.llm.service;
 
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
-import com.dreamhouse.ai.llm.model.reply.ImageSearchReply;
+import com.dreamhouse.ai.llm.dto.ImageSearchDTO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -17,12 +17,12 @@ public interface ImageSimilaritySearchService {
      * @param priceHint optional price range filter for results
      * @return ImageSearchReply containing inferred description and similar house ads
      */
-    ImageSearchReply searchByImage(MultipartFile file,
-                                   Integer k,
-                                   String cityHint,
-                                   String typeHint,
-                                   Integer bedsHint,
-                                   Double priceHint);
+    ImageSearchDTO searchByImage(MultipartFile file,
+                                 Integer k,
+                                 String cityHint,
+                                 String typeHint,
+                                 Integer bedsHint,
+                                 Double priceHint);
 
     /**
      * Searches for similar house advertisements using vector similarity.
