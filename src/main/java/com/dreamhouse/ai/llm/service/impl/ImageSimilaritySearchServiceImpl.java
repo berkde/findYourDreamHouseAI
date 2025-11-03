@@ -2,7 +2,7 @@ package com.dreamhouse.ai.llm.service.impl;
 
 import com.dreamhouse.ai.house.dto.HouseAdDTO;
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
-import com.dreamhouse.ai.llm.model.reply.ImageSearchReply;
+import com.dreamhouse.ai.llm.dto.ImageSearchDTO;
 import com.dreamhouse.ai.llm.service.ImageSimilaritySearchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.image.Image;
@@ -56,12 +56,12 @@ public class ImageSimilaritySearchServiceImpl implements ImageSimilaritySearchSe
      * @return ImageSearchReply containing inferred description and similar house ads
      */
     @Override
-    public ImageSearchReply searchByImage(MultipartFile file,
-                                          Integer k,
-                                          String cityHint,
-                                          String typeHint,
-                                          Integer bedsHint,
-                                          Double priceHint) {
+    public ImageSearchDTO searchByImage(MultipartFile file,
+                                        Integer k,
+                                        String cityHint,
+                                        String typeHint,
+                                        Integer bedsHint,
+                                        Double priceHint) {
         try {
             byte[] bytes = file.getBytes();
             String mime  = file.getContentType() != null ? file.getContentType() : "image/jpeg";
@@ -114,7 +114,7 @@ public class ImageSimilaritySearchServiceImpl implements ImageSimilaritySearchSe
                     .map(e -> mapper.map(e, HouseAdDTO.class))
                     .toList();
 
-            return new ImageSearchReply(structured, vec, houseAds);
+            return new ImageSearchDTO(structured, vec, houseAds);
 
         } catch (Exception e) {
             throw new RuntimeException("Image similarity search failed", e);
