@@ -1,6 +1,6 @@
 package com.dreamhouse.ai.llm.configuration;
 
-import com.dreamhouse.ai.llm.model.reply.HouseSearchReply;
+import com.dreamhouse.ai.llm.dto.HouseSearchDTO;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -10,7 +10,7 @@ import java.util.concurrent.*;
 @Configuration
 public class PerformanceConfiguration {
     @Bean
-    public ConcurrentHashMap<String, CompletableFuture<HouseSearchReply>> houseSearchInflight() {
+    public ConcurrentHashMap<String, CompletableFuture<HouseSearchDTO>> houseSearchInflight() {
         return new ConcurrentHashMap<>();
     }
 
