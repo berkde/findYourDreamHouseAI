@@ -1,7 +1,7 @@
 package com.dreamhouse.ai.llm.tool;
 
 import com.dreamhouse.ai.cache.service.impl.QueryKeyServiceImpl;
-import com.dreamhouse.ai.llm.model.reply.ImageSearchReply;
+import com.dreamhouse.ai.llm.dto.ImageSearchDTO;
 import com.dreamhouse.ai.llm.service.impl.ImageSimilaritySearchServiceImpl;
 import dev.langchain4j.agent.tool.Tool;
 import org.hibernate.exception.LockAcquisitionException;
@@ -95,7 +95,7 @@ public class ImageSearchTool {
 
                         MultipartFile file = new BytesMultipartFile("file", suggestedFilename, effectiveMime, bytes);
 
-                        ImageSearchReply r = imageSimilaritySearchService.searchByImage(
+                        ImageSearchDTO r = imageSimilaritySearchService.searchByImage(
                                 file, k, cityHint, typeHint, bedsHint, priceHint
                         );
 
