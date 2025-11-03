@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.llm.model.reply;
+package com.dreamhouse.ai.llm.dto;
 
 import com.dreamhouse.ai.house.dto.HouseAdDTO;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -8,7 +8,7 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 
-public class HouseSearchReply implements Serializable {
+public class HouseSearchDTO implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
 
@@ -18,16 +18,17 @@ public class HouseSearchReply implements Serializable {
     @JsonProperty("summary")
     private String summary;
 
-    public HouseSearchReply() {
+    @JsonProperty("agentReply")
+    private String agentReply;
+
+    public HouseSearchDTO() {
         /*
             This constructor has been intentionally left empty for
             object marshalling and serialization motives
         */
     }
-
     public List<HouseAdDTO> getHouseAdDTOS() {
-        if  (houseAdDTOS == null) return Collections.emptyList();
-        return List.copyOf(houseAdDTOS);
+        return houseAdDTOS != null ? houseAdDTOS : Collections.emptyList();
     }
 
     public void setHouseAdDTOS(List<HouseAdDTO> houseAdDTOS) {
@@ -40,5 +41,13 @@ public class HouseSearchReply implements Serializable {
 
     public void setSummary(String summary) {
         this.summary = summary;
+    }
+
+    public String getAgentReply() {
+        return agentReply;
+    }
+
+    public void setAgentReply(String agentReply) {
+        this.agentReply = agentReply;
     }
 }
