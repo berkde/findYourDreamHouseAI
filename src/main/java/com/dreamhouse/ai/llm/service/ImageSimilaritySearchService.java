@@ -1,7 +1,7 @@
 package com.dreamhouse.ai.llm.service;
 
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
-import com.dreamhouse.ai.llm.dto.ImageSearchDTO;
+import com.dreamhouse.ai.llm.model.dto.ImageSearchDTO;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

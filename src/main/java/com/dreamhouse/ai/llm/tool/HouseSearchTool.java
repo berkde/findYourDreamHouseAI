@@ -5,9 +5,9 @@ import com.dreamhouse.ai.house.dto.HouseAdDTO;
 
 import com.dreamhouse.ai.house.repository.HouseAdRepository;
 import com.dreamhouse.ai.cloud.service.impl.StorageServiceImpl;
-import com.dreamhouse.ai.llm.model.request.FilterSpec;
+import com.dreamhouse.ai.llm.model.dto.FilterSpec;
 import com.dreamhouse.ai.llm.model.request.HouseAdSpecs;
-import com.dreamhouse.ai.llm.dto.HouseSearchDTO;
+import com.dreamhouse.ai.llm.model.dto.HouseSearchDTO;
 import com.dreamhouse.ai.mapper.HouseAdImageMapper;
 import com.dreamhouse.ai.mapper.HouseAdMapper;
 import dev.langchain4j.agent.tool.Tool;

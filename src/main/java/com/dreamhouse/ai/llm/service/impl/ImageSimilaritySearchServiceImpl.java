@@ -2,7 +2,7 @@ package com.dreamhouse.ai.llm.service.impl;
 
 import com.dreamhouse.ai.house.dto.HouseAdDTO;
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
-import com.dreamhouse.ai.llm.dto.ImageSearchDTO;
+import com.dreamhouse.ai.llm.model.dto.ImageSearchDTO;
 import com.dreamhouse.ai.llm.service.ImageSimilaritySearchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.image.Image;

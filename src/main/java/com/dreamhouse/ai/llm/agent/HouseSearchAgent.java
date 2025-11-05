@@ -1,6 +1,6 @@
 package com.dreamhouse.ai.llm.agent;
 
-import com.dreamhouse.ai.llm.dto.HouseSearchDTO;
+import com.dreamhouse.ai.llm.model.dto.HouseSearchDTO;
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;

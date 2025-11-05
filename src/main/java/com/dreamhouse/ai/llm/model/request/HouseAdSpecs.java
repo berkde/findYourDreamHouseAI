@@ -1,6 +1,7 @@
 package com.dreamhouse.ai.llm.model.request;
 
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
+import com.dreamhouse.ai.llm.model.dto.FilterSpec;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
