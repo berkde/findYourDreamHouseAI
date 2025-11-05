@@ -2,6 +2,10 @@ package com.dreamhouse.ai.authentication.service.impl;
 
 import com.dreamhouse.ai.authentication.dto.UserDTO;
 import com.dreamhouse.ai.authentication.exception.*;
+import com.dreamhouse.ai.listener.event.UserRegisteredEvent;
+import com.dreamhouse.ai.llm.entity.AITokenEntity;
+import com.dreamhouse.ai.llm.model.dto.AITokenDTO;
+import com.dreamhouse.ai.llm.service.impl.AITokenServiceImpl;
 import com.dreamhouse.ai.mapper.UserMapper;
 import com.dreamhouse.ai.authentication.model.entity.AddressEntity;
 import com.dreamhouse.ai.authentication.model.entity.AuthorityEntity;
@@ -39,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.management.relation.RoleNotFoundException;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -53,6 +58,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final RedissonClient redissonClient;
     private final QueryKeyServiceImpl queryKeyService;
+    private final AITokenServiceImpl  tokenService;
     private final ApplicationEventPublisher eventPublisher;
     private final UserMapper userMapper;
 
@@ -63,6 +69,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                            BCryptPasswordEncoder passwordEncoder,
                            RedissonClient redissonClient,
                            QueryKeyServiceImpl queryKeyService,
+                           AITokenServiceImpl tokenService,
                            ApplicationEventPublisher eventPublisher,
                            UserMapper userMapper) {
         this.userRepository = userRepository;
@@ -71,6 +78,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         this.passwordEncoder = passwordEncoder;
         this.redissonClient = redissonClient;
         this.queryKeyService = queryKeyService;
+        this.tokenService = tokenService;
         this.eventPublisher = eventPublisher;
         this.userMapper = userMapper;
     }
@@ -117,6 +125,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             var savedUserEntity = userRepository.save(userEntity);
             log.info("User registration successful - userId: {}, username: {}", 
                     savedUserEntity.getUserID(), savedUserEntity.getUsername());
+            eventPublisher.publishEvent(new UserRegisteredEvent(savedUserEntity.getUsername()));
 
             return new UserRegisterResponse(
                                 savedUserEntity.getUserID(),
