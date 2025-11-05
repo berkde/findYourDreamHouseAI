@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 
 import java.security.Principal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -16,12 +18,18 @@ public class AIUtil {
         if (principal != null && principal.getName() != null) {
             return "user:" + principal.getName();
         }
-        // fall back to HTTP session id (creates one if missing)
         String httpSessionId = Objects.requireNonNullElseGet(
                 request.getSession(true).getId(),
                 () -> UUID.randomUUID().toString()
         );
         return "sess:" + httpSessionId;
+    }
+
+    public long millisUntilEndOfMonth() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime end = now.toLocalDate().withDayOfMonth(now.toLocalDate().lengthOfMonth())
+                .atTime(23, 59, 59, 999_000_000);
+        return Duration.between(now, end).toMillis();
     }
 
 }
