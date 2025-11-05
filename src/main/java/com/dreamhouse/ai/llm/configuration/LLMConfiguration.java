@@ -28,6 +28,9 @@ import java.util.Objects;
 @Configuration
 @EnableConfigurationProperties({LLMProperties.class})
 public class LLMConfiguration {
+    private static final int CONTEXT_LENGTH = 2000;
+    private static final int TIMEOUT_MINUTES = 3;
+    private static final int MAX_NUMBER_MESSAGES = 20;
 
     @Bean(name = "qwenChatModel")
     @Primary
@@ -41,8 +44,9 @@ public class LLMConfiguration {
                 .baseUrl(properties.nativeBaseUrl())
                 .modelName(properties.model())
                 .temperature(properties.temperature())
+                .numCtx(CONTEXT_LENGTH)
                 .listeners(List.of(houseSearchListener, imageSearchListener))
-                .timeout(Duration.ofMinutes(3))
+                .timeout(Duration.ofMinutes(TIMEOUT_MINUTES))
                 .logRequests(Boolean.TRUE)
                 .logResponses(Boolean.TRUE)
                 .build();
@@ -88,7 +92,7 @@ public class LLMConfiguration {
     public ChatMemoryProvider houseChatMemoryProvider(ChatMemoryStore store) {
         return sessionId -> new MessageWindowChatMemory.Builder()
                 .id(sessionId != null ? sessionId : "anonymous")
-                .maxMessages(20)
+                .maxMessages(MAX_NUMBER_MESSAGES)
                 .chatMemoryStore(store)
                 .build();
     }
