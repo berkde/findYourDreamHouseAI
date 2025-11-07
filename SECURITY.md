@@ -1,6 +1,6 @@
 # Security Policy — findYourDreamHouseAI
 
-Last updated: 2025-10-30
+Last updated: 11/6/2025
 
 This repository powers a commercial product. Protecting customer data, maintaining service availability, and reducing risk from AI/LLM misuse are top priorities. This document describes how we handle security issues, responsible disclosure, and our approach to secure development and operations.
 
