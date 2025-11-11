@@ -102,8 +102,8 @@ public class AITokenServiceImpl implements AITokenService {
         var aiTokenEntity = new AITokenEntity();
         aiTokenEntity.setToken(token);
         aiTokenEntity.setExpiryDate();
-        aiTokenEntity.setMonthlyQuota();
         aiTokenEntity.setPlanCode(planCode);
+        aiTokenEntity.setMonthlyQuota();
         aiTokenEntity.setActive(Boolean.TRUE);
 
         var stored_user = userRepository
@@ -112,6 +112,9 @@ public class AITokenServiceImpl implements AITokenService {
         aiTokenEntity.setUserId(stored_user.getUserID());
 
         var savedTokenEntity = aiTokenRepository.save(aiTokenEntity);
+        stored_user.setAiAuthToken(savedTokenEntity.getToken());
+        userRepository.save(stored_user);
+
         return savedTokenEntity.getToken();
     }
 
