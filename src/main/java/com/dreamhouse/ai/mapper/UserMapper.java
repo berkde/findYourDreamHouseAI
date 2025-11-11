@@ -17,6 +17,8 @@ public class UserMapper implements Function<UserEntity, UserDTO> {
         userDTO.setUsername(userEntity.getUsername());
         userDTO.setName(userEntity.getName());
         userDTO.setLastname(userEntity.getLastname());
+        userDTO.setType(userEntity.getType());
+        userDTO.setAiAuthToken(userEntity.getAiAuthToken());
 
         var addressEntity = userEntity.getBillingAddress();
         if (addressEntity != null) {
