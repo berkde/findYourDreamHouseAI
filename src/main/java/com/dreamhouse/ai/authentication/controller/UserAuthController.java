@@ -51,7 +51,7 @@ public class UserAuthController {
 
     @DeleteOperation
     @DeleteMapping("/account-deletion/{userId}")
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN')")
     public ResponseEntity<String> deleteAccount(@PathVariable("userId") String userId) {
         var authenticatedUsername = securityUtil.getAuthenticatedUser();
         if (securityUtil.isUserRequestValid(userId, authenticatedUsername) == Boolean.FALSE) {
