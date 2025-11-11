@@ -59,12 +59,12 @@ public class AddressDTO {
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof AddressDTO that)) return false;
-        return Objects.equals(addressID, that.addressID);
+        return Objects.equals(addressID, that.addressID) && Objects.equals(billingStreet, that.billingStreet) && Objects.equals(billingCity, that.billingCity) && Objects.equals(billingState, that.billingState) && Objects.equals(billingZip, that.billingZip);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(addressID);
+        return Objects.hash(addressID, billingStreet, billingCity, billingState, billingZip);
     }
 
     @Override
