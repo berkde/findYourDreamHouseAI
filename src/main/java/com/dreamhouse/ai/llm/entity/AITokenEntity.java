@@ -91,11 +91,17 @@ public class AITokenEntity {
     }
 
     public void setMonthlyQuota() {
-        switch (this.planCode) {
-            case "freemium" -> this.monthlyQuota = 12;
-            case "basic" -> this.monthlyQuota = 300;
-            case "premium" -> this.monthlyQuota = 600;
+        if (this.planCode == null || this.planCode.isBlank()) {
+            this.monthlyQuota = 0;
+            return;
+        }
+
+        switch (this.planCode.toLowerCase()) {
+            case "freemium"  -> this.monthlyQuota = 12;
+            case "basic"     -> this.monthlyQuota = 300;
+            case "premium"   -> this.monthlyQuota = 600;
             case "unlimited" -> this.monthlyQuota = 1200;
+            default          -> this.monthlyQuota = 12; // safe default
         }
     }
 
