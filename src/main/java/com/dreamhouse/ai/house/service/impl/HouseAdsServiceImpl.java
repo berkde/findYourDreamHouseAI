@@ -1,5 +1,6 @@
 package com.dreamhouse.ai.house.service.impl;
 
+import com.dreamhouse.ai.authentication.dto.UserDTO;
 import com.dreamhouse.ai.authentication.repository.UserRepository;
 import com.dreamhouse.ai.cache.service.impl.QueryKeyServiceImpl;
 import com.dreamhouse.ai.cloud.exception.EmptyFileException;
@@ -12,6 +13,7 @@ import com.dreamhouse.ai.house.exception.*;
 import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
 import com.dreamhouse.ai.house.model.entity.HouseAdImageEntity;
 import com.dreamhouse.ai.house.model.entity.HouseAdMessageEntity;
+import com.dreamhouse.ai.house.model.response.LikeHouseAdResponse;
 import com.dreamhouse.ai.listener.event.ImageDeleteBatchEvent;
 import com.dreamhouse.ai.listener.event.ImageDeleteEvent;
 import com.dreamhouse.ai.house.model.request.CreateHouseAdRequestModel;
@@ -25,6 +27,7 @@ import com.dreamhouse.ai.cloud.service.StorageService;
 import com.dreamhouse.ai.mapper.HouseAdImageMapper;
 import com.dreamhouse.ai.mapper.HouseAdMapper;
 import com.dreamhouse.ai.mapper.HouseAdMessageMapper;
+import com.dreamhouse.ai.mapper.UserMapper;
 import io.micrometer.common.lang.Nullable;
 import org.apache.commons.compress.utils.Sets;
 import org.hibernate.exception.LockAcquisitionException;
@@ -72,6 +75,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
     private final HouseAdImageMapper houseImageMapper;
     private final HouseAdMessageMapper houseAdMessageMapper;
     private final ApplicationEventPublisher publisher;
+    private final UserMapper userMapper;
 
     @Autowired
     public HouseAdsServiceImpl(HouseAdRepository houseAdRepository,
@@ -83,7 +87,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                                HouseAdMapper houseMapper,
                                HouseAdImageMapper houseImageMapper,
                                HouseAdMessageMapper houseAdMessageMapper,
-                               ApplicationEventPublisher publisher) {
+                               ApplicationEventPublisher publisher, UserMapper userMapper) {
         this.houseAdRepository = houseAdRepository;
         this.userRepository = userRepository;
         this.houseAdMessageRepository = houseAdMessageRepository;
@@ -94,6 +98,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         this.houseImageMapper = houseImageMapper;
         this.houseAdMessageMapper = houseAdMessageMapper;
         this.publisher = publisher;
+        this.userMapper = userMapper;
     }
 
     /**
@@ -573,6 +578,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
         }
     }
 
+
     /**
      * Searches house advertisements with pagination.
      * @param query the search query string
@@ -620,5 +626,79 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                 .toList();
     }
 
+    /**
+     * Retrieves the users who liked a specific house advertisement.
+     *
+     * @param houseAdUid the unique identifier of the house advertisement
+     * @return a response containing the house ad id and the list of users who liked it
+     */
+    @Override
+    public LikeHouseAdResponse getPostLikers(String houseAdUid) {
+        var houseAd = houseAdRepository
+                .findByHouseAdUid(houseAdUid)
+                .orElseThrow(() -> new HouseAdNotFoundException("House ad not found"));
 
+        var users = houseAd.getLikes()
+                .stream()
+                .<UserDTO>mapMulti((userId, consumer) -> {
+                    var user = userRepository.findByUserID(userId)
+                            .orElse(null);
+                    if (user != null) {
+                        var userDTO = userMapper.apply(user);
+                        consumer.accept(userDTO);
+                    }
+                })
+                .toList();
+
+        return new LikeHouseAdResponse(houseAdUid, users);
+    }
+
+
+    /**
+     * Registers a like for the specified house advertisement by the given user.
+     * If the user has already liked the post, this operation is idempotent and leaves state unchanged.
+     *
+     * @param houseAdId the unique identifier of the house advertisement to like
+     * @param username  the username of the user who likes the post
+     * @return {@code true} if the operation succeeded, otherwise {@code false}
+     */
+    @Override
+    public Boolean likePost(String houseAdId, String username) {
+        var houseAd = houseAdRepository
+                .findByHouseAdUid(houseAdId)
+                .orElseThrow(() -> new HouseAdNotFoundException("House ad not found"));
+
+        var userId = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"))
+                .getUserID();
+
+        houseAd.addLike(userId);
+        houseAdRepository.save(houseAd);
+
+        return Boolean.TRUE;
+    }
+
+    /**
+     * Removes the like of the given user from the specified house advertisement.
+     * If the user had not liked the post, this operation is idempotent and leaves state unchanged.
+     *
+     * @param houseAdId the unique identifier of the house advertisement
+     * @param username  the username of the user whose like will be removed
+     * @return {@code true} if the operation succeeded, otherwise {@code false}
+     */
+    @Override
+    public Boolean removePostLike(String houseAdId, String username) {
+        var houseAd = houseAdRepository
+                .findByHouseAdUid(houseAdId)
+                .orElseThrow(() -> new HouseAdNotFoundException("House ad not found"));
+
+        var userId = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"))
+                .getUserID();
+
+        houseAd.removeLike(userId);
+        houseAdRepository.save(houseAd);
+
+        return Boolean.TRUE;
+    }
 }

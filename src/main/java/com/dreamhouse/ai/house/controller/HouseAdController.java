@@ -1,11 +1,13 @@
 package com.dreamhouse.ai.house.controller;
 
+import com.dreamhouse.ai.authentication.model.security.User;
 import com.dreamhouse.ai.house.dto.HouseAdDTO;
 import com.dreamhouse.ai.house.dto.HouseAdImageDTO;
 import com.dreamhouse.ai.house.dto.HouseAdMessageDTO;
 import com.dreamhouse.ai.house.model.request.CreateHouseAdRequestModel;
 import com.dreamhouse.ai.house.model.request.HouseAdMessageSendRequestModel;
 import com.dreamhouse.ai.house.model.request.UpdateHouseAdTitleAndDescriptionRequestModel;
+import com.dreamhouse.ai.house.model.response.LikeHouseAdResponse;
 import com.dreamhouse.ai.house.service.impl.HouseAdsServiceImpl;
 import com.dreamhouse.ai.cloud.service.impl.StorageServiceImpl;
 import jakarta.validation.Valid;
@@ -20,6 +22,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -166,5 +170,41 @@ public class HouseAdController {
         var houseAdMessages = houseAdsService.findAllMessagesByHouseAdUid(houseAdUid);
         return ResponseEntity.ok().body(houseAdMessages);
     }
+
+    @ReadOperation
+    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    @GetMapping("/houseAd/{houseAdId}/like")
+    public ResponseEntity<LikeHouseAdResponse> getHouseLikes(@PathVariable("houseAdId") String houseAdId) {
+        log.info("Getting house ad likes for houseAd: {}", houseAdId);
+        var houseAdLikes = houseAdsService.getPostLikers(houseAdId);
+        return ResponseEntity.ok().body(houseAdLikes);
+    }
+
+    @WriteOperation
+    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    @PostMapping("/houseAd/{houseAdId}/like")
+    public ResponseEntity<?> postHouseLike(
+            @PathVariable("houseAdId") String houseAdId,
+            @AuthenticationPrincipal Authentication authentication) {
+        log.info("Liking house ad: {}", houseAdId);
+        var username = ((User)authentication.getPrincipal()).getUsername();
+        var isLikeSuccessful = houseAdsService.likePost(houseAdId, username);
+        return (isLikeSuccessful == Boolean.TRUE ? ResponseEntity.ok():
+                        ResponseEntity.internalServerError()).build();
+    }
+
+    @WriteOperation
+    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    @DeleteMapping("/houseAd/{houseAdId}/like")
+    public ResponseEntity<?> removeHouseLike(
+            @PathVariable("houseAdId") String houseAdId,
+            @AuthenticationPrincipal Authentication authentication) {
+        log.info("Liking house ad: {}", houseAdId);
+        var username = ((User)authentication.getPrincipal()).getUsername();
+        var isLikeSuccessful = houseAdsService.removePostLike(houseAdId, username);
+        return (isLikeSuccessful == Boolean.TRUE ? ResponseEntity.ok():
+                ResponseEntity.internalServerError()).build();
+    }
+
 
 }

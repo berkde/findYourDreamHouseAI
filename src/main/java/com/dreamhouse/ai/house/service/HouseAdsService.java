@@ -1,11 +1,13 @@
 package com.dreamhouse.ai.house.service;
 
+import com.dreamhouse.ai.authentication.dto.UserDTO;
 import com.dreamhouse.ai.house.dto.HouseAdDTO;
 import com.dreamhouse.ai.house.dto.HouseAdImageDTO;
 import com.dreamhouse.ai.house.dto.HouseAdMessageDTO;
 import com.dreamhouse.ai.house.model.request.CreateHouseAdRequestModel;
 import com.dreamhouse.ai.house.model.request.HouseAdMessageSendRequestModel;
 import com.dreamhouse.ai.house.model.request.UpdateHouseAdTitleAndDescriptionRequestModel;
+import com.dreamhouse.ai.house.model.response.LikeHouseAdResponse;
 import io.micrometer.common.lang.Nullable;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.multipart.MultipartFile;
@@ -111,6 +113,34 @@ public interface HouseAdsService {
      */
     List<HouseAdDTO> searchAllHouseAdsWithPagination(String query, int page, int size, String sortBy, Sort.Direction direction);
 
+
+    /**
+     * Retrieves the users who liked a specific house advertisement.
+     *
+     * @param houseAdUid the unique identifier of the house advertisement
+     * @return a response containing the house ad id and the list of users who liked it
+     */
+    LikeHouseAdResponse getPostLikers(String houseAdUid);
+
+    /**
+     * Registers a like for the specified house advertisement by the given user.
+     * If the user has already liked the post, implementations may choose to be idempotent.
+     *
+     * @param houseAdId the unique identifier of the house advertisement to like
+     * @param username  the username of the user who likes the post
+     * @return {@code true} if the operation succeeded, otherwise {@code false}
+     */
+    Boolean likePost(String houseAdId, String username);
+
+    /**
+     * Removes the like of the given user from the specified house advertisement.
+     * If the user had not liked the post, implementations may choose to be idempotent.
+     *
+     * @param houseAdId the unique identifier of the house advertisement
+     * @param username  the username of the user whose like will be removed
+     * @return {@code true} if the operation succeeded, otherwise {@code false}
+     */
+    Boolean removePostLike(String houseAdId, String username);
 
 }
 
