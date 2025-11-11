@@ -51,7 +51,7 @@ public class HouseAdController {
     }
 
     @WriteOperation
-    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_OWNER','ROLE_ADMIN')")
     @PostMapping("/create")
     public ResponseEntity<HouseAdDTO> createHouseAd(@RequestBody CreateHouseAdRequestModel requestModel) {
         log.info("createHouseAd - Creating house ad: {}", requestModel.title());
@@ -60,7 +60,7 @@ public class HouseAdController {
     }
 
     @WriteOperation
-    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_OWNER','ROLE_ADMIN')")
     @PutMapping("/updateTitleAndDescription")
     public ResponseEntity<HouseAdDTO> updateHouseAdTitleAndDescriptionRequestModel(@RequestBody UpdateHouseAdTitleAndDescriptionRequestModel requestModel) {
         log.info("updateHouseAd - Updating house ad: {}", requestModel.title());
@@ -70,7 +70,7 @@ public class HouseAdController {
 
 
     @WriteOperation
-    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_OWNER','ROLE_ADMIN')")
     @PostMapping(
             value = "/{houseAdId}/images",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
@@ -106,7 +106,7 @@ public class HouseAdController {
 
 
     @DeleteOperation
-    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_OWNER','ROLE_ADMIN')")
     @DeleteMapping("/{houseAdUid}")
     public ResponseEntity<Boolean> deleteHouseAd(@PathVariable("houseAdUid") String houseAdUid) {
         log.info("deleteHouseAd - Deleting house ad: {}", houseAdUid);
@@ -116,7 +116,7 @@ public class HouseAdController {
 
 
     @DeleteOperation
-    @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_OWNER','ROLE_ADMIN')")
     @DeleteMapping("/{houseAdId}/images/{imageUid}")
     public ResponseEntity<Void> deleteImage(@PathVariable String houseAdId,
                                             @PathVariable String imageUid) {
@@ -165,8 +165,8 @@ public class HouseAdController {
     @ReadOperation
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     @GetMapping("/messages/{houseUid}")
-    public ResponseEntity<List<HouseAdMessageDTO>> findAllByHouseAdUid(@PathVariable("houseUid") String houseAdUid) {
-        log.info("findAllByHouseAdUid - Getting house ad messages by house ad uid: {}", houseAdUid);
+    public ResponseEntity<List<HouseAdMessageDTO>> findAllMessagesByHouseAdUid(@PathVariable("houseUid") String houseAdUid) {
+        log.info("Getting house ad messages by house ad uid: {}", houseAdUid);
         var houseAdMessages = houseAdsService.findAllMessagesByHouseAdUid(houseAdUid);
         return ResponseEntity.ok().body(houseAdMessages);
     }
