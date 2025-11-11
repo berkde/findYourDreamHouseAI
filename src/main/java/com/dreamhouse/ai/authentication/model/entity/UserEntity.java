@@ -38,10 +38,14 @@ public class UserEntity implements Serializable {
     @Column(unique = true, nullable = false)
     private String username;
 
+    @Column(nullable = false)
+    private String type;
+
     @Column(nullable = false) private String name;
     @Column(nullable = false) private String lastname;
     @Column(nullable = false) private String password;
     @Column(name = "authorization_token", unique = true, length = 512) private String authorizationToken;
+    @Column(name = "ai_auth_token", unique = true, length = 512) private String aiAuthToken;
 
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "last_login")
@@ -115,6 +119,14 @@ public class UserEntity implements Serializable {
         this.username = username;
     }
 
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
     public String getName() {
         return name;
     }
@@ -163,6 +175,14 @@ public class UserEntity implements Serializable {
 
     public void setLastLogin(Date lastLogin) {
         this.lastLogin = lastLogin;
+    }
+
+    public String getAiAuthToken() {
+        return aiAuthToken;
+    }
+
+    public void setAiAuthToken(String aiAuthToken) {
+        this.aiAuthToken = aiAuthToken;
     }
 
     public boolean isDeleted() {
