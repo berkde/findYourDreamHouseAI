@@ -14,7 +14,6 @@ import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,8 +52,8 @@ public class UserAuthController {
     @DeleteOperation
     @DeleteMapping("/account-deletion/{userId}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN','ROLE_USER')")
-    public ResponseEntity<String> deleteAccount(@PathVariable("userId") String userId,
-                                                @AuthenticationPrincipal String authenticatedUsername) {
+    public ResponseEntity<String> deleteAccount(@PathVariable("userId") String userId) {
+        var authenticatedUsername = securityUtil.getAuthenticatedUser();
         if (securityUtil.isUserRequestValid(userId, authenticatedUsername) == Boolean.FALSE) {
             return ResponseEntity.badRequest().body("Invalid username or user id");
         }
