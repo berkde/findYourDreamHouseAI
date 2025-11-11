@@ -6,6 +6,7 @@ import com.dreamhouse.ai.house.model.entity.HouseAdEntity;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -33,7 +34,21 @@ public class HouseAdMapper implements Function<HouseAdEntity, HouseAdDTO> {
                     .map(houseImageMapper)
                     .toList();
             houseAdDTO.setImages(images);
+        } else {
+            houseAdDTO.setImages(Collections.emptyList());
         }
+
+        if(houseAd.getLikes() != null) {
+            var likedUsers = houseAd.getLikes()
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+            houseAdDTO.setLikedUsers(likedUsers);
+        } else {
+            houseAdDTO.setLikedUsers(Collections.emptyList());
+        }
+
         return houseAdDTO;
     }
 }
