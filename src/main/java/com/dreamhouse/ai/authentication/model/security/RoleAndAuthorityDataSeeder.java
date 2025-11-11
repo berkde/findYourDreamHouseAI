@@ -31,6 +31,8 @@ public class RoleAndAuthorityDataSeeder implements CommandLineRunner {
         AuthorityEntity delete = ensureAuthority("DELETE");
 
         ensureRole("ROLE_USER",  new HashSet<>(Set.of(read, write)));
+        ensureRole("ROLE_OWNER",  new HashSet<>(Set.of(read, write,delete)));
+        ensureRole("ROLE_BUYER_RENTER",  new HashSet<>(Set.of(read, write)));
         ensureRole("ROLE_ADMIN", new HashSet<>(Set.of(read, write, delete)));
     }
 
