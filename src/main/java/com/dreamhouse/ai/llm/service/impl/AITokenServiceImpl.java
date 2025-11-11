@@ -22,6 +22,24 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.UUID;
 
+/**
+ * Default implementation of {@link com.dreamhouse.ai.llm.service.AITokenService} that manages
+ * AI access tokens, ownership validation, and monthly quota consumption.
+ * 
+ * Persistence is handled via {@code AITokenRepository}, user lookups via {@code UserRepository},
+ * and usage counting via Redis (Redisson) using an {@code RAtomicLong} per token-month key.
+ * This class does not mutate business logic beyond token/quota management and avoids
+ * transactional boundaries itself; callers may wrap operations in transactions if needed.
+ *
+ * Concurrency and rate limits:
+ * Quota consumption uses Redis atomic increments to provide thread-safe counting across nodes.
+ * A per-month TTL is applied to usage counters so they naturally reset at the end of the month.
+ * 
+ *
+ * Constraints:
+ * Tokens have an upper monthly quota cap enforced by {@code MAX_TOKEN_LIMIT}.
+ * Ownership is validated against the authenticated user's id.
+ */
 @Service
 public class AITokenServiceImpl implements AITokenService {
     private static final Logger log = LoggerFactory.getLogger(AITokenServiceImpl.class);
@@ -31,6 +49,14 @@ public class AITokenServiceImpl implements AITokenService {
     private final RedissonClient redissonClient;
     private final AIUtil aiUtil;
 
+    /**
+     * Constructs the service with required collaborators.
+     *
+     * @param aiTokenRepository repository used to persist and query token records
+     * @param userRepository    repository used to resolve user identities and ownership
+     * @param redissonClient    Redis client used for distributed, atomic quota counters
+     * @param aiUtil            helper utilities (e.g., end-of-month TTL calculation)
+     */
     @Autowired
     public AITokenServiceImpl(AITokenRepository aiTokenRepository,
                               UserRepository userRepository,
@@ -42,6 +68,9 @@ public class AITokenServiceImpl implements AITokenService {
         this.aiUtil = aiUtil;
     }
 
+    /** {@inheritDoc}
+     * Validation includes expiry check, max monthly quota sanity, and ownership match.
+     */
     @Override
     public Boolean isTokenValid(String rawToken, String username) {
         if (StringUtils.isEmpty(rawToken)) {
@@ -62,6 +91,11 @@ public class AITokenServiceImpl implements AITokenService {
         return  isNotExpired && isWithingMaxPlanLimit && isOwnerMatching;
     }
 
+    /** {@inheritDoc}
+     * Generates a new opaque token, sets expiry and default monthly quota derived from plan code,
+     * and binds it to the resolved user id for the provided username.
+     * @throws org.springframework.security.core.userdetails.UsernameNotFoundException if the user cannot be resolved
+     */
     @Override
     public String generateToken(String username, String planCode) {
         var token = UUID.randomUUID().toString().replaceAll("-", "");
@@ -81,6 +115,10 @@ public class AITokenServiceImpl implements AITokenService {
         return savedTokenEntity.getToken();
     }
 
+    /** {@inheritDoc}
+     * Looks up the token by user id and fails if none is found.
+     * @throws com.dreamhouse.ai.llm.exception.AITokenNotFoundException if no token exists for the given user id
+     */
     @Override
     public AITokenEntity getToken(String userId) {
         return aiTokenRepository
@@ -88,6 +126,10 @@ public class AITokenServiceImpl implements AITokenService {
                 .orElseThrow(() -> new AITokenNotFoundException("Token not found"));
     }
 
+    /** {@inheritDoc}
+     * Updates the stored plan code and resets monthly quota according to plan defaults.
+     * @throws com.dreamhouse.ai.llm.exception.AITokenNotFoundException if the token cannot be found
+     */
     @Override
     public AITokenDTO updateTokenPlanAndQuota(String token, String planCode) {
         var aiTokenEntity = aiTokenRepository.findByToken(token).orElseThrow(() -> new AITokenNotFoundException("Token not found"));
@@ -97,6 +139,14 @@ public class AITokenServiceImpl implements AITokenService {
         return new AITokenDTO(savedToken.getToken());
     }
 
+    /** {@inheritDoc}
+     * Atomically increments this token's monthly usage counter in Redis and enforces the stored monthly quota.
+     * Initializes a TTL on the usage counter so it expires at the end of the current month.
+     * Throws when the increment would exceed the monthly quota.
+     *
+     * @throws com.dreamhouse.ai.llm.exception.QuotaExceededException if the token is invalid/expired or quota would be exceeded
+     * @throws com.dreamhouse.ai.llm.exception.AITokenNotFoundException if the token cannot be found when resolving quota
+     */
     @Override
     public int consumeQuota(String token, String username) {
         if (!isTokenValid(token, username)) {
@@ -129,6 +179,11 @@ public class AITokenServiceImpl implements AITokenService {
         return (int) (monthlyQuota - after);
     }
 
+    /** {@inheritDoc}
+     * Returns an existing token for the user if present; otherwise creates a new token bound to the
+     * {@code freemium} plan and returns it.
+     * @throws org.springframework.security.core.userdetails.UsernameNotFoundException if the username cannot be resolved
+     */
     @Override
     public String ensureFreemiumTokenIfMissing(String username) {
         var userID = userRepository.findByUsername(username)
