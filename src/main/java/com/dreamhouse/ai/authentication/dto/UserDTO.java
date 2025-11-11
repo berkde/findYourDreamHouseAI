@@ -9,6 +9,8 @@ public class UserDTO {
     private String name;
     private String lastname;
     private AddressDTO billingAddress;
+    private String type;
+    private String aiAuthToken;
 
     public UserDTO() {
         /*
@@ -57,15 +59,31 @@ public class UserDTO {
         this.billingAddress = billingAddress;
     }
 
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getAiAuthToken() {
+        return aiAuthToken;
+    }
+
+    public void setAiAuthToken(String aiAuthToken) {
+        this.aiAuthToken = aiAuthToken;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof UserDTO userDTO)) return false;
-        return Objects.equals(userID, userDTO.userID);
+        return Objects.equals(userID, userDTO.userID) && Objects.equals(username, userDTO.username) && Objects.equals(name, userDTO.name) && Objects.equals(lastname, userDTO.lastname) && Objects.equals(billingAddress, userDTO.billingAddress) && Objects.equals(type, userDTO.type) && Objects.equals(aiAuthToken, userDTO.aiAuthToken);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(userID);
+        return Objects.hash(userID, username, name, lastname, billingAddress, type, aiAuthToken);
     }
 
     @Override
@@ -76,6 +94,7 @@ public class UserDTO {
         sb.append(", name='").append(name).append('\'');
         sb.append(", lastname='").append(lastname).append('\'');
         sb.append(", billingAddress=").append(billingAddress);
+        sb.append(", type='").append(type).append('\'');
         sb.append('}');
         return sb.toString();
     }
