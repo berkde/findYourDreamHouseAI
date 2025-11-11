@@ -2,6 +2,13 @@ spring:
   application:
     name: FindYourDreamHouseAI
 
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+  validation:
+    method:
+      adapt-constraint-violations: true
+
   threads:
     virtual:
       enabled: true
