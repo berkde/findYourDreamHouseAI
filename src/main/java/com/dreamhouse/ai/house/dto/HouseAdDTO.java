@@ -11,6 +11,8 @@ public class HouseAdDTO {
     private String city;
     private String viewUrl;
     private List<HouseAdImageDTO> images;
+    private int numberOfLikes;
+    private List<String> likedUsers;
 
     public HouseAdDTO() {
     }
@@ -57,6 +59,26 @@ public class HouseAdDTO {
 
     public void setImages(List<HouseAdImageDTO> images) {
         this.images = images;
+    }
+
+    public int getNumberOfLikes() {
+        return numberOfLikes;
+    }
+
+    public void setNumberOfLikes() {
+        if (!this.getLikedUsers().isEmpty()) {
+            this.numberOfLikes = this.getNumberOfLikes();
+        } else {
+            this.numberOfLikes = 0;
+        }
+    }
+
+    public List<String> getLikedUsers() {
+        return likedUsers;
+    }
+
+    public void setLikedUsers(List<String> likedUsers) {
+        this.likedUsers = likedUsers;
     }
 
     @Override
