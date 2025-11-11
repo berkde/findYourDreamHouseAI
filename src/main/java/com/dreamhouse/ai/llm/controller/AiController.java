@@ -11,13 +11,14 @@ import com.dreamhouse.ai.llm.service.impl.AITokenServiceImpl;
 import com.dreamhouse.ai.llm.service.impl.ImageSimilaritySearchServiceImpl;
 import com.dreamhouse.ai.llm.util.AIUtil;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +29,7 @@ import java.util.Map;
 @RequestMapping("/api/v1/ai")
 @Validated
 public class AiController {
+    private static final Logger log = LoggerFactory.getLogger(AiController.class);
     private final HouseSearchAgent houseSearchAgent;
     private final ImageSearchAgent imageSearchAgent;
     private final ImageSimilaritySearchServiceImpl imageSimilaritySearchService;
@@ -50,16 +52,18 @@ public class AiController {
     @WriteOperation
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @PostMapping(value = "/search")
-    public ResponseEntity<SearchReply> search(@AuthenticationPrincipal Authentication authentication,
-                                              @RequestHeader(value = "X-API-Token") String x_api_token,
+    public ResponseEntity<SearchReply> search(@RequestHeader(value = "X-API-Token") String x_api_token,
                                               @Valid @RequestBody ChatRequest request) {
-        if (!aiTokenService.isTokenValid(x_api_token, authentication.getName())) {
-            return ResponseEntity.status(429).body(new ChatReply("AI access requires a valid token"));
+        var username = aiUtil.getAuthenticatedUser();
+        if (!aiTokenService.isTokenValid(x_api_token, username)) {
+            return ResponseEntity
+                    .status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(new ChatReply("AI access requires a valid token"));
         } else {
             String query = request.query();
-            String sessionId = String.valueOf((authentication.getPrincipal())).toLowerCase();
+            String sessionId = username.toLowerCase();
             HouseSearchDTO reply = houseSearchAgent.chat(sessionId, query);
-            aiTokenService.consumeQuota(x_api_token, authentication.getName());
+            aiTokenService.consumeQuota(x_api_token, username);
             boolean chatOnly = reply.getHouseAdDTOS().isEmpty();
             return chatOnly ? ResponseEntity.ok(new ChatReply(reply.getAgentReply())) :
                     ResponseEntity.ok(new ListingsReply(reply.getHouseAdDTOS(), reply.getSummary()));
@@ -70,7 +74,6 @@ public class AiController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     @PostMapping("/similar")
     public ResponseEntity<?> similar(
-            @AuthenticationPrincipal Authentication authentication,
             @RequestHeader(value = "X-API-Token") String x_api_token,
             @RequestPart("file") MultipartFile file,
             @RequestParam(value = "k", required = false) Integer k,
@@ -79,7 +82,8 @@ public class AiController {
             @RequestParam(value = "bedsHint", required = false) Integer bedsHint,
             @RequestParam(value = "priceHint", required = false) Double priceHint
     ) {
-        if (!aiTokenService.isTokenValid(x_api_token, authentication.getName())) {
+        var username = aiUtil.getAuthenticatedUser();
+        if (!aiTokenService.isTokenValid(x_api_token, username)) {
             return ResponseEntity.status(429).body(new ChatReply("AI access requires a valid token"));
         } else {
             var r = imageSimilaritySearchService.searchByImage(file, k, cityHint, typeHint, bedsHint, priceHint);
