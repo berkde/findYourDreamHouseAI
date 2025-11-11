@@ -92,6 +92,8 @@ public class HouseAdEntity implements Serializable {
     @OrderBy("messageDate DESC")
     private Set<HouseAdMessageEntity> messages = new LinkedHashSet<>();
 
+    private List<String> likes;
+
     public HouseAdEntity() {
         /*
             This constructor has been intentionally left empty for
@@ -302,6 +304,19 @@ public class HouseAdEntity implements Serializable {
 
     public void setMessages(Set<HouseAdMessageEntity> messages) {
         this.messages = messages;
+    }
+
+    public List<String> getLikes() {
+        return likes;
+    }
+
+    public void addLike(String userId) {
+        if(likes == null) likes = new ArrayList<>();
+        if(!likes.contains(userId)) likes.add(userId);
+    }
+
+    public void removeLike(String userId) {
+        if(likes != null) likes.remove(userId);
     }
 
     @Override
