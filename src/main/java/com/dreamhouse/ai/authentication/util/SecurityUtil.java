@@ -1,11 +1,13 @@
 package com.dreamhouse.ai.authentication.util;
 
+import com.dreamhouse.ai.authentication.exception.AuthenticatedUserNotFound;
 import com.dreamhouse.ai.authentication.exception.UserIDNotFoundException;
 import com.dreamhouse.ai.authentication.repository.UserRepository;
 import io.jsonwebtoken.Jwts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -117,5 +119,24 @@ public class SecurityUtil {
         return Boolean.FALSE;
         }
     }
+
+    /**
+     * Returns the username of the currently authenticated user from Spring Security's context.
+     * <p>
+     * Reads the current Authentication from SecurityContextHolder and returns its name. If there is no
+     * authenticated principal (for example, missing/anonymous authentication), this method throws a
+     * runtime exception indicating authentication failed.
+     * </p>
+     *
+     * @return the non-blank username of the current authenticated principal
+     */
+    public String getAuthenticatedUser() {
+        var username = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (username == null || username.isBlank()) {
+            throw new AuthenticatedUserNotFound("Authentication failed");
+        }
+        return username;
+    }
+
 
 }
