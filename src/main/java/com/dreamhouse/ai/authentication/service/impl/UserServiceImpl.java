@@ -2,9 +2,8 @@ package com.dreamhouse.ai.authentication.service.impl;
 
 import com.dreamhouse.ai.authentication.dto.UserDTO;
 import com.dreamhouse.ai.authentication.exception.*;
+import com.dreamhouse.ai.authentication.util.SecurityUtil;
 import com.dreamhouse.ai.listener.event.UserRegisteredEvent;
-import com.dreamhouse.ai.llm.entity.AITokenEntity;
-import com.dreamhouse.ai.llm.model.dto.AITokenDTO;
 import com.dreamhouse.ai.llm.service.impl.AITokenServiceImpl;
 import com.dreamhouse.ai.mapper.UserMapper;
 import com.dreamhouse.ai.authentication.model.entity.AddressEntity;
@@ -43,7 +42,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.management.relation.RoleNotFoundException;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -117,10 +115,31 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             userEntity.setDeleted(Boolean.FALSE);
             userEntity.setLastPasswordUpdate(new Date());
 
+            Set<RoleEntity> roleEntities = new HashSet<>();
+            String userType = userRegisterRequest.type().trim().toLowerCase();
+            switch (userType) {
+                case "buyer","renter" -> {
+                    RoleEntity roleEntity = roleRepository
+                            .findByName("ROLE_BUYER_RENTER")
+                            .orElseThrow(() -> new RoleNotFoundException("Role not found"));
+                    roleEntities.add(roleEntity);
+                }
+                case "owner" -> {
+                    RoleEntity roleEntity = roleRepository
+                            .findByName("ROLE_OWNER")
+                            .orElseThrow(() -> new RoleNotFoundException("Role not found"));
+                    roleEntities.add(roleEntity);
+                }
+                default -> throw new UserTypeNotFoundException("Invalid user type: " + userType);
+            }
+
             RoleEntity roleEntity = roleRepository
-                                    .findByName("ROLE_USER")
-                                    .orElseThrow(() -> new RoleNotFoundException("Role not found"));
-            userEntity.setRoles(Set.of(roleEntity));
+                    .findByName("ROLE_USER")
+                    .orElseThrow(() -> new RoleNotFoundException("Role not found"));
+
+            roleEntities.add(roleEntity);
+            userEntity.setRoles(roleEntities);
+            userEntity.setType(userType);
 
             var savedUserEntity = userRepository.save(userEntity);
             log.info("User registration successful - userId: {}, username: {}", 
@@ -131,7 +150,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                                 savedUserEntity.getUserID(),
                                 savedUserEntity.getUsername(),
                                 savedUserEntity.getName(),
-                                savedUserEntity.getLastname());
+                                savedUserEntity.getLastname(),
+                                savedUserEntity.getType(),
+                                savedUserEntity.getAiAuthToken() != null ? savedUserEntity.getAiAuthToken() : "undefined");
 
 
         } catch (InterruptedException ie) {
@@ -144,7 +165,11 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         }  catch (RoleNotFoundException ex) {
             log.warn("Registration failed - role not found for username: {}", normalizedUsername);
             throw new UserAccountNotCreatedException("Role not found");
-        } finally {
+        } catch (UserTypeNotFoundException ex) {
+            log.warn("Registration failed - user type not found for username: {}", normalizedUsername);
+            throw new UserTypeNotFoundException("Type not found");
+        }
+        finally {
             if (lock.isHeldByCurrentThread())
                 lock.unlock();
         }
