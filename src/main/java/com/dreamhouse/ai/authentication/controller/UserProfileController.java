@@ -11,7 +11,6 @@ import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,8 +33,8 @@ public class UserProfileController {
     @PostMapping("/{userId}/address")
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
     public ResponseEntity<String> addOrUpdateBillingAddress(@PathVariable("userId") String userId,
-                                                            @RequestBody AddressCreationRequestModel model,
-                                                            @AuthenticationPrincipal String username) {
+                                                            @RequestBody AddressCreationRequestModel model) {
+        var username = securityUtil.getAuthenticatedUser();
         if (securityUtil.isUserRequestValid(userId, username) == Boolean.FALSE) {
             return ResponseEntity.badRequest().body(null);
         }
@@ -49,8 +48,8 @@ public class UserProfileController {
     @ReadOperation
     @GetMapping(path = "/{userId}")
     @PreAuthorize("hasAnyAuthority('ROLE_USER','ROLE_ADMIN')")
-    public ResponseEntity<UserDTO> getUserProfile(@PathVariable("userId") String userId,
-                                                  @AuthenticationPrincipal String username) {
+    public ResponseEntity<UserDTO> getUserProfile(@PathVariable("userId") String userId) {
+        var username = securityUtil.getAuthenticatedUser();
         if (securityUtil.isUserRequestValid(userId, username) == Boolean.FALSE) {
             return ResponseEntity.badRequest().body(null);
         }
