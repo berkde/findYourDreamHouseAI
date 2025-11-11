@@ -30,23 +30,23 @@ public record UserRegisterRequest(
         @JsonProperty("lastname") 
         @NotBlank(message = "Lastname is required")
         @Size(min = 2, max = 100, message = "Lastname must be between 2 and 100 characters")
-        String lastname
+        String lastname,
+
+        @JsonProperty("type")
+        @NotBlank(message = "User type is required")
+        String type
 ) {
-    public UserRegisterRequest {
-        Assert.hasText(username, "Username must not be empty");
-        Assert.hasText(password, "Password must not be empty");
-        Assert.hasText(name, "Name must not be empty");
-        Assert.hasText(lastname, "Lastname must not be empty");
-    }
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof UserRegisterRequest(String username1, String password1, String name1, String lastname1))) return false;
-        return Objects.equals(name, name1) && Objects.equals(username, username1) && Objects.equals(password, password1) && Objects.equals(lastname, lastname1);
+        if (!(o instanceof UserRegisterRequest(
+                String username1, String password1, String name1, String lastname1, String type1
+        ))) return false;
+        return Objects.equals(name, name1) && Objects.equals(type, type1) && Objects.equals(username, username1) && Objects.equals(password, password1) && Objects.equals(lastname, lastname1);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(username, password, name, lastname);
+        return Objects.hash(username, password, name, lastname, type);
     }
 }
