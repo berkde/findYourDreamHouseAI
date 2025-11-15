@@ -34,7 +34,19 @@
 </p>
 
 
-A cutting-edge AI-powered real estate platform that revolutionizes property search through intelligent image analysis, natural language processing, and vector similarity search using local Qwen models. Built with Spring Boot 3, this application combines traditional property management with advanced local AI capabilities to provide users with intelligent, context-aware property recommendations while maintaining complete data privacy.
+FindYourDreamHouseAI is an **AI-powered real estate search platform** that lets users search for properties using **images and natural language**, backed by:
+
+- Local **Qwen vision + LLM models** (no data leaves the system)
+- **Vector similarity search** with pgvector for intelligent matching
+- A secure, production-grade **Spring Boot** backend with JWT auth, caching, and AWS S3 integration
+
+
+> ### 🔍 At a Glance
+> - **Type:** Backend-heavy AI application (Spring Boot, LangChain4j, Qwen, Postgres, Redis, AWS)
+> - **Focus:** AI-powered property search (images + natural language) with local LLMs and vector search
+> - **Demonstrates:** Backend architecture, AI integration, security (JWT A256GCM), caching, AWS, pgvector, and production-ready design
+
+
 
 ## 🚀 Quick Start
 
@@ -54,6 +66,28 @@ mvn spring-boot:run
 **API Documentation**: [Complete API Reference](./docs/API.md)  
 **Developer Guide**: [Setup & Development](./docs/DEVELOPER.md)  
 **Deployment Guide**: [Production Deployment](./docs/DEPLOYMENT.md)
+
+## 💼 Why This Project Matters
+
+This project is part of my portfolio to demonstrate that I can:
+
+- Build **production-grade backend systems** with Spring Boot and modern Java.
+- Integrate **local LLMs and vision models** (Qwen) into real products using LangChain4j.
+- Design **secure, scalable architectures** with JWT auth, AWS, Redis, and Postgres.
+- Work end-to-end: from **API design** and **data modeling** to **deployment and troubleshooting**.
+
+
+## 👨‍💻 My Role (Berk Delibalta)
+
+- Designed the overall **backend architecture** (Spring Boot 3, Java 22, modular package structure).
+- Implemented **JWT-based authentication** with encrypted tokens (A256GCM) and Spring Security 6.
+- Built the **AI integration layer** with LangChain4j, Qwen LLMs, and Qwen-VL for image + text search.
+- Engineered the **vector search pipeline** using Qwen embeddings + pgvector in PostgreSQL.
+- Integrated **AWS S3 + Secrets Manager** for secure image storage and configuration management.
+- Implemented **multi-level caching** with Redis + Caffeine and distributed locking for performance.
+- Defined **REST APIs** for house ads, messaging, AI search, and image upload, with full request/response models.
+- Wrote configuration for **Dockerized deployments**, environment-based configs, and production-readiness.
+
 
 ## ✨ Features
 
