@@ -17,7 +17,7 @@
 <p align="center">
 
   <!-- Core stack -->
-<a href="./pom.xml"><img src="https://img.shields.io/badge/Java-22-007396?logo=java&logoColor=white" alt="Java"/></a>
+<a href="./pom.xml"><img src="https://img.shields.io/badge/Java-25-007396?logo=java&logoColor=white" alt="Java"/></a>
 <a href="./pom.xml"><img src="https://img.shields.io/badge/Spring%20Boot-3.5.4-6DB33F?logo=spring-boot&logoColor=white" alt="Spring Boot"/></a>
 <a href="./pom.xml"><img src="https://img.shields.io/badge/Maven-Build-blue?logo=apache-maven&logoColor=white" alt="Maven"/></a>
 <a href="#"><img src="https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql&logoColor=white" alt="PostgreSQL"/></a>
@@ -144,35 +144,47 @@ mvn spring-boot:run
 
 ## 🏗️ Architecture
 
-### System Overview
+### System Overview (Mermaid)
+
+```mermaid
+flowchart LR
+%% External Entities
+    user[End User / API Client]
+
+%% External Services
+    db[(PostgreSQL + pgvector)]
+    redis[(Redis / Redisson)]
+    s3[(AWS S3)]
+    llm["Local LLM Runtime\n(Ollama/Qwen Chat & Embeddings)"]
+
+%% Backend Subgraph
+    subgraph backend[Spring Boot Backend]
+        direction TB
+        api[REST API Layer]
+        auth[JWT Auth & Security]
+        ai[LLM/AI Module]
+        house[House Ads Module]
+        imagesvc[Image Processing]
+        cache[Cache Layer]
+    end
+
+%% Connections
+    user -->|HTTPS REST| api
+    api --> auth
+    api --> ai
+    api --> house
+    api --> imagesvc
+    api --> cache
+
+    house --> db
+    ai --> llm
+    ai --> db
+    imagesvc --> s3
+    cache --> redis
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   API Gateway   │    │   Spring Boot   │
-│   (React/Vue)   │◄──►│   (Optional)    │◄──►│   Application   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                        │
-                       ┌─────────────────┐              │
-                       │   PostgreSQL    │◄─────────────┘
-                       │   + pgvector    │
-                       │   Database      │
-                       └─────────────────┘
-                                │
-                       ┌─────────────────┐
-                       │   AWS S3        │
-                       │   (Images)      │
-                       └─────────────────┘
-                                │
-                       ┌─────────────────┐
-                       │   Qwen AI       │
-                       │   (Local Model) │
-                       │   Vision + LLM  │
-                       └─────────────────┘
-                                │
-                       ┌─────────────────┐
-                       │   Redis Cache   │
-                       │   + Caffeine    │
-                       └─────────────────┘
-```
+
+
+For detailed diagrams (containers, sequences, and AI agents orchestration), see [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ### Module Structure
 ```
@@ -202,24 +214,24 @@ com.dreamhouse.ai/
 
 ## 🛠️ Technology Stack
 
-| Component | Technology | Version | Purpose |
-|-----------|------------|---------|---------|
-| **Runtime** | Java | 22 | Application runtime |
-| **Framework** | Spring Boot | 3.5.4 | Application framework |
-| **Security** | Spring Security | 6.5.2 | Authentication & authorization |
-| **Database** | PostgreSQL + pgvector | Latest | Primary data store + vector search |
-| **ORM** | Spring Data JPA | 3.5.4 | Data persistence |
-| **AI Framework** | LangChain4j | 0.35.0 | AI agent orchestration |
-| **AI Models** | Qwen Vision & LLM | Local | Image analysis & text generation |
-| **AI Embeddings** | Qwen Embeddings | Local | Vector similarity search |
-| **Cloud** | AWS SDK | 2.31.78 | S3, Secrets Manager, CloudWatch |
+| Component | Technology | Version                          | Purpose |
+|-----------|------------|----------------------------------|---------|
+| **Runtime** | Java | 25                               | Application runtime |
+| **Framework** | Spring Boot | 3.5.4                            | Application framework |
+| **Security** | Spring Security | 6.5.2                            | Authentication & authorization |
+| **Database** | PostgreSQL + pgvector | Latest                           | Primary data store + vector search |
+| **ORM** | Spring Data JPA | 3.5.4                            | Data persistence |
+| **AI Framework** | LangChain4j | 1.8.0                            | AI agent orchestration |
+| **AI Models** | Qwen Vision & LLM | Local                            | Image analysis & text generation |
+| **AI Embeddings** | Qwen Embeddings | Local                            | Vector similarity search |
+| **Cloud** | AWS SDK | 2.31.78                          | S3, Secrets Manager, CloudWatch |
 | **Caching** | Redis + Caffeine | Redisson 3.36.0 + Caffeine 3.1.8 | Distributed + local caching |
-| **JWT** | JJWT | 0.12.6 | Token management |
-| **Mapping** | ModelMapper | 2.0.0 | Object mapping |
-| **Image Processing** | Thumbnailator | 0.4.20 | Image resizing & compression |
-| **Vector DB** | pgvector | 0.1.2 | Vector similarity search |
-| **Hibernate Vector** | hibernate-vector | 6.6.22.Final | Vector support for Hibernate |
-| **Build** | Maven | 3.9+ | Dependency management |
+| **JWT** | JJWT | 0.12.6                           | Token management |
+| **Mapping** | ModelMapper | 2.0.0                            | Object mapping |
+| **Image Processing** | Thumbnailator | 0.4.20                           | Image resizing & compression |
+| **Vector DB** | pgvector | 0.1.2                            | Vector similarity search |
+| **Hibernate Vector** | hibernate-vector | 6.6.22.Final                     | Vector support for Hibernate |
+| **Build** | Maven | 3.9+                             | Dependency management |
 
 
 ## 📋 Table of Contents
@@ -245,7 +257,7 @@ com.dreamhouse.ai/
 Before you begin, ensure you have the following installed and configured:
 
 ### Required Software
-- **Java 22** (as specified in pom.xml)
+- **Java 25** 
 - **Maven 3.9+** for dependency management
 - **PostgreSQL 12+** database server
 - **Redis 7.0+** for caching
@@ -298,15 +310,42 @@ aws secretsmanager create-secret \
   --secret-string "prod/"
 ```
 
-### 3. Environment Variables (Optional)
+### 3. Environment Variables (Recommended)
 
-You can override configuration using environment variables:
+Configuration is managed via environment variables (see `src/main/resources/application.yaml`). Common variables:
+
+- Database
+  - `POSTGRESQL_URL` (e.g., `jdbc:postgresql://localhost:5432/findyourdreamhouse`)
+  - `POSTGRESQL_USERNAME`
+  - `POSTGRESQL_PASSWORD`
+- Redis
+  - `SPRING_DATA_REDIS_HOST` (defaults to `localhost` if not set via application.yaml)
+  - `SPRING_DATA_REDIS_PORT` (defaults to `6379`)
+- AWS / Logging
+  - `AWS_REGION` (e.g., `us-east-1`)
+  - `CLOUDWATCH_NAMESPACE`
+  - `LOGS_FILE_LOCATION` (e.g., `logs/app.log`)
+- Security
+  - `S3_SECRET_KEY` (Secrets Manager secret id used to fetch JWT secret)
+- LLM configuration
+  - `LLM_URL`
+  - `LLM_NATIVE_BASE_URL`
+  - `AI_API_KEY`
+  - `LLM_MODEL`
+  - `LLM_TEMPERATURE`
+  - `LLM_EMBEDDING_MODEL`
+- Sonar (if used locally/CI)
+  - `SONAR_LOGIN_KEY`
+  - `SONAR_HOST_URL`
+
+Example local setup:
 
 ```bash
-export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/findyourdreamhouse
-export SPRING_DATASOURCE_USERNAME=your_username
-export SPRING_DATASOURCE_PASSWORD=your_password
+export POSTGRESQL_URL=jdbc:postgresql://localhost:5432/findyourdreamhouse
+export POSTGRESQL_USERNAME=your_username
+export POSTGRESQL_PASSWORD=your_password
 export AWS_REGION=us-east-1
+export LOGS_FILE_LOCATION=logs/app.log
 ```
 
 ## 🚀 Installation & Setup
@@ -319,7 +358,7 @@ git clone https://github.com/berkde/findYourDreamHouseAI.git
   cd FindYourDreamHouseAI
 
 # Verify Java version
-java -version  # Should be 22
+java -version  # Should be 25
 
 # Verify Maven installation
 mvn -version  # Should be 3.9+
@@ -428,7 +467,7 @@ Content-Type: multipart/form-data
       "title": "Similar Modern House",
       "price": 450000,
       "address": "123 Main St",
-      "images": [...]
+      "images": ["..."]
     }
   ],
   "appliedHints": {
@@ -464,7 +503,7 @@ Content-Type: application/json
       "description": "Spacious family home...",
       "price": 450000,
       "address": "789 Pine Street, NYC",
-      "images": [...]
+      "images": ["..."]
     }
   ]
 }
@@ -665,7 +704,7 @@ Local AI services require additional environment variables:
 Create a `Dockerfile`:
 
 ```dockerfile
-FROM openjdk:24-jdk-slim
+FROM openjdk:25-jdk-slim
 COPY target/FindYourDreamHouseAI-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app.jar"]
@@ -679,7 +718,9 @@ docker build -t findyourdreamhouse-ai .
 
 # Run container
 docker run -p 8080:8080 \
-  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host.docker.internal:5432/findyourdreamhouse \
+  -e POSTGRESQL_URL=jdbc:postgresql://host.docker.internal:5432/findyourdreamhouse \
+  -e POSTGRESQL_USERNAME=app_user \
+  -e POSTGRESQL_PASSWORD=app_password \
   -e AWS_REGION=us-east-1 \
   findyourdreamhouse-ai
 ```
