@@ -2,9 +2,6 @@ package com.dreamhouse.ai.authentication.service.impl;
 
 import com.dreamhouse.ai.authentication.dto.UserDTO;
 import com.dreamhouse.ai.authentication.exception.*;
-import com.dreamhouse.ai.authentication.util.SecurityUtil;
-import com.dreamhouse.ai.listener.event.UserRegisteredEvent;
-import com.dreamhouse.ai.llm.service.impl.AITokenServiceImpl;
 import com.dreamhouse.ai.mapper.UserMapper;
 import com.dreamhouse.ai.authentication.model.entity.AddressEntity;
 import com.dreamhouse.ai.authentication.model.entity.AuthorityEntity;
@@ -43,6 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.management.relation.RoleNotFoundException;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.toSet;
@@ -56,9 +55,9 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final RedissonClient redissonClient;
     private final QueryKeyServiceImpl queryKeyService;
-    private final AITokenServiceImpl  tokenService;
     private final ApplicationEventPublisher eventPublisher;
     private final UserMapper userMapper;
+    private final ConcurrentHashMap<String, CompletableFuture<Object>> inflight = new ConcurrentHashMap<>();
 
     @Autowired
     public UserServiceImpl(UserRepository userRepository,
@@ -67,7 +66,6 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                            BCryptPasswordEncoder passwordEncoder,
                            RedissonClient redissonClient,
                            QueryKeyServiceImpl queryKeyService,
-                           AITokenServiceImpl tokenService,
                            ApplicationEventPublisher eventPublisher,
                            UserMapper userMapper) {
         this.userRepository = userRepository;
@@ -76,16 +74,10 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         this.passwordEncoder = passwordEncoder;
         this.redissonClient = redissonClient;
         this.queryKeyService = queryKeyService;
-        this.tokenService = tokenService;
         this.eventPublisher = eventPublisher;
         this.userMapper = userMapper;
     }
 
-    /**
-     * Registers a new user in the system.
-     * @param userRegisterRequest the user registration request containing user details
-     * @return UserRegisterResponse containing the created user information
-     */
     @Transactional
     @Override
     public UserRegisterResponse registerUser(UserRegisterRequest userRegisterRequest) {
@@ -93,16 +85,13 @@ public class UserServiceImpl implements UserService, UserDetailsService {
         final String lockKey = queryKeyService.lockKey("auth-register",1, normalizedUsername);
         RLock lock = redissonClient.getLock(lockKey);
 
-        log.info("Starting user registration for username: {}", normalizedUsername);
-
         try {
             if(!lock.tryLock(2,10, TimeUnit.SECONDS)) {
-                log.warn("Registration request throttled for username: {}", normalizedUsername);
                 throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
             }
 
             if (userRepository.existsByUsername(normalizedUsername)) {
-                log.warn("Registration failed - user already exists: {}", normalizedUsername);
+                log.warn("registerUser - User already exists");
                 throw new UserAlreadyExistsException("User already exists");
             }
 
@@ -115,36 +104,12 @@ public class UserServiceImpl implements UserService, UserDetailsService {
             userEntity.setDeleted(Boolean.FALSE);
             userEntity.setLastPasswordUpdate(new Date());
 
-            Set<RoleEntity> roleEntities = new HashSet<>();
-            String userType = userRegisterRequest.type().trim().toLowerCase();
-            switch (userType) {
-                case "buyer","renter" -> {
-                    RoleEntity roleEntity = roleRepository
-                            .findByName("ROLE_BUYER_RENTER")
-                            .orElseThrow(() -> new RoleNotFoundException("Role not found"));
-                    roleEntities.add(roleEntity);
-                }
-                case "owner" -> {
-                    RoleEntity roleEntity = roleRepository
-                            .findByName("ROLE_OWNER")
-                            .orElseThrow(() -> new RoleNotFoundException("Role not found"));
-                    roleEntities.add(roleEntity);
-                }
-                default -> throw new UserTypeNotFoundException("Invalid user type: " + userType);
-            }
-
             RoleEntity roleEntity = roleRepository
-                    .findByName("ROLE_USER")
-                    .orElseThrow(() -> new RoleNotFoundException("Role not found"));
-
-            roleEntities.add(roleEntity);
-            userEntity.setRoles(roleEntities);
-            userEntity.setType(userType);
+                                    .findByName("ROLE_USER")
+                                    .orElseThrow(() -> new RoleNotFoundException("Role not found"));
+            userEntity.setRoles(Set.of(roleEntity));
 
             var savedUserEntity = userRepository.save(userEntity);
-            log.info("User registration successful - userId: {}, username: {}", 
-                    savedUserEntity.getUserID(), savedUserEntity.getUsername());
-            eventPublisher.publishEvent(new UserRegisteredEvent(savedUserEntity.getUsername()));
 
             return new UserRegisterResponse(
                                 savedUserEntity.getUserID(),
@@ -152,47 +117,31 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                                 savedUserEntity.getName(),
                                 savedUserEntity.getLastname(),
                                 savedUserEntity.getType(),
-                                savedUserEntity.getAiAuthToken() != null ? savedUserEntity.getAiAuthToken() : "undefined");
+                                savedUserEntity.getAiAuthToken());
 
 
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
-            log.error("Registration interrupted for username: {}", normalizedUsername);
             throw new UserAccountNotCreatedException("Interrupted");
-        } catch (DataIntegrityViolationException e) {
-            log.warn("Registration failed - data integrity violation for username: {} - reason: {}", normalizedUsername, e.getMessage());
+        } catch (DataIntegrityViolationException dup) {
             throw new UserAlreadyExistsException("User already exists");
-        }  catch (RoleNotFoundException ex) {
-            log.warn("Registration failed - role not found for username: {}", normalizedUsername);
-            throw new UserAccountNotCreatedException("Role not found");
-        } catch (UserTypeNotFoundException ex) {
-            log.warn("Registration failed - user type not found for username: {}", normalizedUsername);
-            throw new UserTypeNotFoundException("Type not found");
-        }
-        finally {
+        } catch (Exception e) {
+            log.error("registerUser - error: {}", e.getMessage(), e);
+            throw new UserAccountNotCreatedException("Error creating user account");
+        } finally {
             if (lock.isHeldByCurrentThread())
                 lock.unlock();
         }
     }
 
-    /**
-     * Edits role authorities by adding or removing permissions.
-     * @param request the request containing role name, operation, and authorities
-     * @return Boolean indicating success of the operation
-     */
     @Transactional
     @Override
     public Boolean editRoleAuthorities(RoleAuthorityEditRequestModel request) {
         String roleName = request.roleName();
         String lockKey = queryKeyService.lockKey("role-edit",1, roleName);
         RLock lock = redissonClient.getLock(lockKey);
-        
-        log.info("Starting role authority edit - role: {}, operation: {}, authorities: {}", 
-                roleName, request.operation(), request.authorities());
-        
         try {
             if(!lock.tryLock(2,10,TimeUnit.SECONDS)) {
-                log.warn("Role authority edit request throttled for role: {}", roleName);
                 throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
             }
             List<String> authorities = request.authorities();
@@ -210,20 +159,18 @@ public class UserServiceImpl implements UserService, UserDetailsService {
 
             if (add) {
                 role.getAuthorities().addAll(toApply);
-                log.info("Successfully added {} authorities to role: {}", toApply.size(), roleName);
             } else {
                 role.getAuthorities().removeAll(toApply);
-                log.info("Successfully removed {} authorities from role: {}", toApply.size(), roleName);
             }
 
             roleRepository.save(role);
+
+            log.info("editRoleAuthorities - {} authorities on role", add ? "added" : "removed");
             return Boolean.TRUE;
         } catch (RoleNotFoundException e) {
-            log.error("Role authority edit failed - role not found: {}", roleName);
             throw new AuthoritiesNotEditedException("Authorities not updated");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Role authority edit interrupted for role: {}", roleName);
             throw new AuthoritiesNotEditedException("Interrupted");
         } finally {
             if (lock.isHeldByCurrentThread())
@@ -232,10 +179,6 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     }
 
 
-    /**
-     * Deletes a user account and all associated data.
-     * @param userId the unique identifier of the user to delete
-     */
     @Override
     @Caching(evict = {
             @CacheEvict(value = "users", key = "#userId"),
@@ -243,166 +186,87 @@ public class UserServiceImpl implements UserService, UserDetailsService {
     })
     @Transactional
     public void deleteAccount(String userId) {
-        log.info("Starting account deletion for userId: {}", userId);
-        String lockKey = queryKeyService.lockKey("auth-delete",1, userId);
-        RLock lock = redissonClient.getLock(lockKey);
+        var userEntity = userRepository
+                .findByUserID(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        try {
-            if(!lock.tryLock(2,10,TimeUnit.SECONDS)) {
-                log.warn("User Delete request throttled for userId: {}", userId);
-                throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
-            }
+        var storageKeys = userEntity.getHouseAds().stream()
+                .flatMap(houseAd -> houseAd.getImages().stream())
+                .map(HouseAdImageEntity::getStorageKey)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
 
-            var userEntity = userRepository
-                    .findByUserID(userId)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-
-            var storageKeys = userEntity.getHouseAds().stream()
-                    .flatMap(houseAd -> houseAd.getImages().stream())
-                    .map(HouseAdImageEntity::getStorageKey)
-                    .filter(Objects::nonNull)
-                    .distinct()
-                    .toList();
-
-            userRepository.delete(userEntity);
-            log.info("User account deleted successfully - userId: {}, username: {}",
-                    userId, userEntity.getUsername());
-
-            if (!storageKeys.isEmpty()) {
-                    eventPublisher.publishEvent(new ImageDeleteBatchEvent(storageKeys));
-                    log.info("Queued {} S3 images for deletion - userId: {}", storageKeys.size(), userId);
-            }
-
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("User Account delete interrupted for role: {}", userId);
-            throw new UserAccountNotDeletedException("Interrupted");
-        } finally {
-            if (lock.isHeldByCurrentThread())
-                lock.unlock();
+        userRepository.delete(userEntity);
+        if (!storageKeys.isEmpty()) {
+                eventPublisher.publishEvent(new ImageDeleteBatchEvent(storageKeys));
+                log.info("S3 images queued to be deleted");
         }
     }
 
-    /**
-     * Retrieves a user by their username.
-     * @param username the username to search for
-     * @return UserDTO containing user information
-     */
     @Override
     @Cacheable(value = "users", key = "#username")
     @Transactional(readOnly = true)
     public UserDTO getUserByUsername(String username) {
-        log.debug("Retrieving user by username: {}", username);
-        
         return userRepository
                 .findByUsername(username)
                 .map(userMapper)
-                .orElseThrow(() -> {
-                    log.warn("User not found by username: {}", username);
-                    return new UsernameNotFoundException("User not found");
-                });
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
-    /**
-     * Retrieves a user by their unique identifier.
-     * @param userId the unique user identifier
-     * @return UserDTO containing user information
-     */
     @Override
     @Cacheable(value = "users", key = "#userId")
     @Transactional(readOnly = true)
     public UserDTO getUserById(String userId) {
-        log.debug("Retrieving user by userId: {}", userId);
-        
         var userDTO = userRepository
                     .findByUserID(userId)
                     .map(userMapper)
-                    .orElseThrow(() -> {
-                        log.warn("User not found by userId: {}", userId);
-                        return new UserIDNotFoundException("User not found");
-                    });
-        
-        log.debug("User retrieved successfully - userId: {}, username: {}", 
-                userDTO.getUserID(), userDTO.getUsername());
+                    .orElseThrow(() -> new UserIDNotFoundException("User not found"));
+        log.info("getUserById - User found: {}", userDTO.getUserID());
         return userDTO;
     }
 
-    /**
-     * Adds or updates the billing address for a user.
-     * @param userId the unique identifier of the user
-     * @param model the address creation request model containing address details
-     * @return Boolean indicating success of the operation
-     */
     @Transactional
     @CacheEvict(value = "users", key = "#userId")
     @Override
-    public Boolean addOrUpdateBillingAddress(String userId, AddressCreationRequestModel model) {
-        log.info("Starting billing address update for userId: {}", userId);
-
-        final String lockKey = queryKeyService.lockKey("address-update", 1, userId);
-        RLock lock = redissonClient.getLock(lockKey);
+    public Boolean addOrUpdateBillingAddress(String userId, AddressCreationRequestModel model){
+        UserEntity user = userRepository.findByUserID(userId)
+                .orElseThrow(() -> new UserIDNotFoundException("User not found"));
 
         try {
-            if (!lock.tryLock(2, 10, TimeUnit.SECONDS)) {
-                log.warn("Address update request throttled for userId: {}", userId);
-                throw new LockAcquisitionException("Request Throttled", new SQLException("Request Throttled"));
+            AddressEntity addr = user.getBillingAddress();
+            if (addr == null) {
+                addr = new AddressEntity();
+                addr.setAddressID(UUID.randomUUID().toString());
+                user.setBillingAddress(addr);
+                addr.setBilledUser(user);
             }
 
-            UserEntity user = userRepository.findByUserID(userId)
-                    .orElseThrow(() -> new UserIDNotFoundException("User not found"));
+            if (model.billingStreet() != null)
+                addr.setStreet(model.billingStreet());
+            if (model.billingCity() != null)
+                 addr.setCity(model.billingCity());
+            if (model.billingState() != null)
+                 addr.setState(model.billingState());
+            if (model.billingZip() != null)
+                addr.setZip(model.billingZip());
 
-                AddressEntity addr = user.getBillingAddress();
-                if (addr == null) {
-                    addr = new AddressEntity();
-                    addr.setAddressID(UUID.randomUUID().toString());
-                    user.setBillingAddress(addr);
-                    addr.setBilledUser(user);
-                    log.debug("Created new billing address for userId: {}", userId);
-                } else {
-                    log.debug("Updating existing billing address for userId: {}", userId);
-                }
-
-                if (model.billingStreet() != null)
-                    addr.setStreet(model.billingStreet());
-                if (model.billingCity() != null)
-                    addr.setCity(model.billingCity());
-                if (model.billingState() != null)
-                    addr.setState(model.billingState());
-                if (model.billingZip() != null)
-                    addr.setZip(model.billingZip());
-
-                userRepository.save(user);
-                log.info("Billing address updated successfully - userId: {}, addressId: {}",
-                        userId, addr.getAddressID());
+            log.info("addAddress - Address added: {}", addr.getAddressID());
+            userRepository.save(user);
 
             return Boolean.TRUE;
-
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                log.error("Address update interrupted for role: {}", userId);
-                throw new UserAccountNotDeletedException("Interrupted");
-            } catch (Exception e) {
-                log.error("Billing address update failed for userId: {} - error: {}", userId, e.getMessage(), e);
-                throw new AddressAddingException("Error adding address");
-            } finally {
-                if (lock.isHeldByCurrentThread())
-                    lock.unlock();
-            }
+        } catch (Exception e) {
+            log.error("addAddress - Error adding address: {}", userId, e);
+            throw new AddressAddingException("Error adding address");
         }
+    }
 
 
-    /**
-     * Loads user details for authentication.
-     * @param username the username to load
-     * @return UserDetails containing user authentication information
-     */
     @Transactional(readOnly = true)
     @Override
     public UserDetails loadUserByUsername(String username) {
-        log.debug("Loading user details for authentication - username: {}", username);
-        
         if (!userRepository.existsByUsername(username)) {
-            log.warn("Authentication failed - user not found: {}", username);
+            log.warn("loadUserByUsername - User not found: {}", username);
             throw new UsernameNotFoundException("User not found");
         }
 
@@ -410,7 +274,7 @@ public class UserServiceImpl implements UserService, UserDetailsService {
                 .findByUsername(username)
                 .map(User::new)
                 .orElseThrow(() -> {
-                    log.error("Authentication failed - user exists but couldn't be loaded: {}", username);
+                    log.info("loadUserByUsername - User found");
                     return new UsernameNotFoundException("User couldn't be fetched");
                 });
     }
