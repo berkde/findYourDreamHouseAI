@@ -1,21 +1,20 @@
-package com.dreamhouse.ai.llm.configuration;
+package com.dreamhouse.ai.llm.configuration.llm;
 
-import com.dreamhouse.ai.llm.agent.HouseSearchAgent;
-import com.dreamhouse.ai.llm.agent.ImageSearchAgent;
+import com.dreamhouse.ai.llm.configuration.guardrails.properties.GuardrailProperties;
+import com.dreamhouse.ai.llm.configuration.llm.properties.LLMProperties;
 import com.dreamhouse.ai.llm.listener.HouseSearchListener;
 import com.dreamhouse.ai.llm.listener.ImageSearchListener;
-import com.dreamhouse.ai.llm.tool.HouseSearchTool;
-import com.dreamhouse.ai.llm.tool.ImageSearchTool;
 import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
-import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
-import dev.langchain4j.service.AiServices;
 
 
 import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
+import opennlp.tools.languagemodel.LanguageModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.*;
@@ -37,7 +36,7 @@ import java.util.Objects;
  * Embedding model uses the same Ollama base URL but a configurable model name.
  */
 @Configuration
-@EnableConfigurationProperties({LLMProperties.class})
+@EnableConfigurationProperties({LLMProperties.class, GuardrailProperties.class})
 public class LLMConfiguration {
     /**
      * Maximum number of tokens (context length) to allocate for the model's window.
@@ -51,46 +50,9 @@ public class LLMConfiguration {
      * Maximum number of recent messages to keep in the sliding window chat memory per session.
      */
     private static final int MAX_NUMBER_MESSAGES = 20;
+    private static final Logger log = LoggerFactory.getLogger(LLMConfiguration.class);
 
-    /**
-     * Builds an {@link HouseSearchAgent} backed by the configured chat model and house search tool.
-     * The agent is stateful per session via the provided chat memory provider.
-     *
-     * @param model               chat model to use for reasoning and tool calling
-     * @param tool                domain tool exposing house search capabilities
-     * @param chatMemoryProvider  provider that supplies per-session windowed chat memory
-     * @return a configured {@link HouseSearchAgent}
-     */
-    @Bean("houseAgent")
-    public HouseSearchAgent houseSearchAgent(ChatLanguageModel model,
-                                             HouseSearchTool tool,
-                                             @Qualifier("houseChatMemoryProvider")ChatMemoryProvider chatMemoryProvider) {
-        return AiServices.builder(HouseSearchAgent.class)
-                .chatLanguageModel(model)
-                .chatMemoryProvider(chatMemoryProvider)
-                .tools(tool)
-                .build();
-    }
 
-    /**
-     * Builds an {@link ImageSearchAgent} backed by the configured chat model and image search tool.
-     * Shares the same chat memory provider bean which issues per-session memory windows.
-     *
-     * @param qwenModel           chat model to use for reasoning and tool calling
-     * @param tool                tool exposing image search capabilities
-     * @param chatMemoryProvider  provider that supplies per-session windowed chat memory
-     * @return a configured {@link ImageSearchAgent}
-     */
-    @Bean("imageAgent")
-    public ImageSearchAgent imageSearchAgent(ChatLanguageModel qwenModel,
-                                             ImageSearchTool tool,
-                                             @Qualifier("houseChatMemoryProvider")ChatMemoryProvider chatMemoryProvider) {
-        return AiServices.builder(ImageSearchAgent.class)
-                .chatLanguageModel(qwenModel)
-                .chatMemoryProvider(chatMemoryProvider)
-                .tools(tool)
-                .build();
-    }
 
     /**
      * Creates the primary chat language model backed by Ollama.
@@ -98,22 +60,23 @@ public class LLMConfiguration {
      * @param properties            application LLM properties; must provide model name, base URL and temperature
      * @param houseSearchListener   listener enabling tool-calling for house search flows
      * @param imageSearchListener   listener enabling tool-calling for image search flows
-     * @return configured {@link ChatLanguageModel}
+     * @return configured {@link LanguageModel}
      * @throws IllegalStateException if {@code llm.model} is null or blank
      */
     @Bean(name = "qwenChatModel")
     @Primary
-    public ChatLanguageModel qwenChatModel(LLMProperties properties,
-                                           @Qualifier("houseSearchListener") HouseSearchListener houseSearchListener,
-                                           @Qualifier("imageSearchListener") ImageSearchListener imageSearchListener) {
-        String model = Objects.requireNonNull(properties.model(), "llm.model is null").trim();
-        if (model.isEmpty()) throw new IllegalStateException("llm.model is blank");
+    public OllamaChatModel qwenChatModel(LLMProperties properties,
+                                         @Qualifier("houseSearchListener") HouseSearchListener houseSearchListener,
+                                         @Qualifier("imageSearchListener") ImageSearchListener imageSearchListener) {
+        String model = Objects.requireNonNull(properties.model(), "llm model is null").trim();
+        if (model.isEmpty()) throw new IllegalStateException("llm model is blank");
 
         return OllamaChatModel.builder()
                 .baseUrl(properties.nativeBaseUrl())
                 .modelName(properties.model())
                 .temperature(properties.temperature())
                 .numCtx(CONTEXT_LENGTH)
+                .topK(5)
                 .listeners(List.of(houseSearchListener, imageSearchListener))
                 .timeout(Duration.ofMinutes(TIMEOUT_MINUTES))
                 .logRequests(Boolean.TRUE)
@@ -139,6 +102,18 @@ public class LLMConfiguration {
     }
 
 
+    @Bean(name = "guardianModel")
+    public OllamaChatModel guardianModel(LLMProperties properties) {
+        return OllamaChatModel.builder()
+                .baseUrl(properties.nativeBaseUrl())
+                .modelName("granite3-guardian:2b")
+                .numCtx(CONTEXT_LENGTH)
+                .temperature(properties.temperature())
+                .logRequests(Boolean.TRUE)
+                .logResponses(Boolean.TRUE)
+                .build();
+    }
+
     /**
      * Provides an in-memory chat memory store suitable for single-node or ephemeral environments.
      * For production, replace with a distributed store if conversations must persist across nodes.
@@ -158,8 +133,8 @@ public class LLMConfiguration {
      * @param store backing store used to persist chat memories
      * @return a provider that yields per-session windowed chat memories
      */
-    @Bean("houseChatMemoryProvider")
-    public ChatMemoryProvider houseChatMemoryProvider(ChatMemoryStore store) {
+    @Bean("chatMemoryProvider")
+    public ChatMemoryProvider chatMemoryProvider(ChatMemoryStore store) {
         return sessionId -> new MessageWindowChatMemory.Builder()
                 .id(sessionId != null ? sessionId : "anonymous")
                 .maxMessages(MAX_NUMBER_MESSAGES)

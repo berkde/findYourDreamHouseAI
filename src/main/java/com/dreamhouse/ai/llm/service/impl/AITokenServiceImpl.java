@@ -43,7 +43,7 @@ import java.util.UUID;
 @Service
 public class AITokenServiceImpl implements AITokenService {
     private static final Logger log = LoggerFactory.getLogger(AITokenServiceImpl.class);
-    private static final int MAX_TOKEN_LIMIT = 1200;
+    private static final int MAX_TOKEN_LIMIT = 12000;
     private final AITokenRepository aiTokenRepository;
     private final UserRepository userRepository;
     private final RedissonClient redissonClient;
@@ -85,10 +85,14 @@ public class AITokenServiceImpl implements AITokenService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         boolean isNotExpired = stored_token.getExpiryDate().isAfter(LocalDateTime.now());
-        boolean isWithingMaxPlanLimit = stored_token.getMonthlyQuota() <= MAX_TOKEN_LIMIT;
+        boolean isWithinMaxPlanLimit = stored_token.getMonthlyQuota() <= MAX_TOKEN_LIMIT;
         boolean isOwnerMatching = stored_token.getUserId().equals(stored_user.getUserID());
 
-        return  isNotExpired && isWithingMaxPlanLimit && isOwnerMatching;
+        System.out.println("isNotExpired: " + isNotExpired);
+        System.out.println("isWithinMaxPlanLimit: " + isWithinMaxPlanLimit);
+        System.out.println("isOwnerMatching: " + isOwnerMatching);
+
+        return  isNotExpired && isWithinMaxPlanLimit && isOwnerMatching;
     }
 
     /** {@inheritDoc}
@@ -152,7 +156,7 @@ public class AITokenServiceImpl implements AITokenService {
      */
     @Override
     public int consumeQuota(String token, String username) {
-        if (!isTokenValid(token, username)) {
+        if (isTokenValid(token, username) == Boolean.FALSE) {
             throw new QuotaExceededException("Invalid or expired token");
         }
 

@@ -9,7 +9,7 @@ import dev.langchain4j.data.image.Image;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import net.coobird.thumbnailator.Thumbnails;
 import org.modelmapper.ModelMapper;
@@ -29,7 +29,7 @@ import java.util.List;
 
 @Service
 public class ImageSimilaritySearchServiceImpl implements ImageSimilaritySearchService {
-    private final ChatLanguageModel visionChatModel;
+    private final ChatModel visionChatModel;
     private final EmbeddingModel embeddingModel;
     private final ModelMapper mapper;
     private final ObjectMapper objectMapper;
@@ -38,7 +38,7 @@ public class ImageSimilaritySearchServiceImpl implements ImageSimilaritySearchSe
     private EntityManager em;
 
     @Autowired
-    public ImageSimilaritySearchServiceImpl(ChatLanguageModel visionChatModel, EmbeddingModel embeddingModel, ModelMapper mapper, ObjectMapper objectMapper) {
+    public ImageSimilaritySearchServiceImpl(ChatModel visionChatModel, EmbeddingModel embeddingModel, ModelMapper mapper, ObjectMapper objectMapper) {
         this.visionChatModel = visionChatModel;
         this.embeddingModel = embeddingModel;
         this.mapper = mapper;
@@ -89,12 +89,12 @@ public class ImageSimilaritySearchServiceImpl implements ImageSimilaritySearchSe
                 """;
 
             String dataUrl = "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(bytes);
-            String structured = visionChatModel.generate(
+            String structured = visionChatModel.chat(
                     UserMessage.from(
                             TextContent.from(prompt),
                             ImageContent.from(Image.builder().url(dataUrl).build())
                     )
-            ).content().text();
+            ).aiMessage().text();
 
             objectMapper.readTree(structured);
 

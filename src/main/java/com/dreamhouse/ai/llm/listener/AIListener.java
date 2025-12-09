@@ -18,15 +18,15 @@ public sealed interface AIListener extends ChatModelListener
     Logger log = LoggerFactory.getLogger(AIListener.class);
 
     default void onRequest(@NotNull ChatModelRequestContext requestContext) {
-        var request = requestContext.request();
-        var model = request.model();
+        var request = requestContext.chatRequest();
+        var model = request.modelName();
         var messages = request.messages().stream().filter(Objects::nonNull).map(ChatMessage::type).toList().toString();
         log.info("Model :{} | Messages: {}" ,model, messages);
     }
 
     default void onResponse(@NotNull ChatModelResponseContext responseContext) {
-        var response = responseContext.response();
-        var model = response.model();
+        var response = responseContext.chatResponse();
+        var model = response.modelName();
         var message = response.aiMessage().text();
         var input_token_count = response.tokenUsage().inputTokenCount();
         var output_token_count = response.tokenUsage().outputTokenCount();
@@ -36,7 +36,7 @@ public sealed interface AIListener extends ChatModelListener
     }
 
     default void onError(@NotNull ChatModelErrorContext errorContext) {
-        var model = errorContext.partialResponse().model();
+        var model = errorContext.modelProvider().name();
         var errorMessage= errorContext.error().getMessage();
         log.error( "Model: {} | Error: {}", model, errorMessage);
     }

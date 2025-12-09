@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.llm.configuration;
+package com.dreamhouse.ai.llm.configuration.llm.properties;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.micrometer.common.util.StringUtils;

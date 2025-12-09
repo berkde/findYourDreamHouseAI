@@ -1,4 +1,4 @@
-package com.dreamhouse.ai.llm.configuration;
+package com.dreamhouse.ai.llm.configuration.cache;
 
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
