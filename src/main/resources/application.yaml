@@ -144,6 +144,35 @@ llm:
   temperature: ${LLM_TEMPERATURE}
   embedding-model-name: ${LLM_EMBEDDING_MODEL}
 
+langchain4j:
+  ai-services:
+    auto-configure: false
+
+guardrails:
+  moderation:
+    enabled: true
+    toxicity-threshold: 0.65
+
+  injection:
+    enabled: true
+    strict-mode: true
+
+  relevance:
+    enabled: false      # for now
+    min-cosine: 0.55
+
+  formatting:
+    enabled: true
+    max-input-chars: 2000
+    max-output-chars: 20000
+    json-output-enabled: true
+
+  rate-limit:
+    enabled: true
+    per-minute: 60
+    burst-size: 10
+
+
 sonar:
   projectKey: FindYourDreamHouseAI
   projectName: FindYourDreamHouseAI
