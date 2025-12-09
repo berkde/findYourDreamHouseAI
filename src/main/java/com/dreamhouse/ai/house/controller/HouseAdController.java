@@ -1,6 +1,6 @@
 package com.dreamhouse.ai.house.controller;
 
-import com.dreamhouse.ai.authentication.model.security.User;
+import com.dreamhouse.ai.cloud.service.StorageService;
 import com.dreamhouse.ai.house.dto.HouseAdDTO;
 import com.dreamhouse.ai.house.dto.HouseAdImageDTO;
 import com.dreamhouse.ai.house.dto.HouseAdMessageDTO;
@@ -8,8 +8,7 @@ import com.dreamhouse.ai.house.model.request.CreateHouseAdRequestModel;
 import com.dreamhouse.ai.house.model.request.HouseAdMessageSendRequestModel;
 import com.dreamhouse.ai.house.model.request.UpdateHouseAdTitleAndDescriptionRequestModel;
 import com.dreamhouse.ai.house.model.response.LikeHouseAdResponse;
-import com.dreamhouse.ai.house.service.impl.HouseAdsServiceImpl;
-import com.dreamhouse.ai.cloud.service.impl.StorageServiceImpl;
+import com.dreamhouse.ai.house.service.HouseAdsService;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -23,7 +22,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,13 +35,13 @@ import java.util.List;
 @Validated
 public class HouseAdController {
     private static final Logger log = LoggerFactory.getLogger(HouseAdController.class);
-    private final HouseAdsServiceImpl houseAdsService;
-    private final StorageServiceImpl storageService;
+    private final HouseAdsService houseAdsService;
+    private final StorageService storageService;
     private final ModelMapper modelMapper;
 
     @Autowired
-    public HouseAdController(HouseAdsServiceImpl houseAdsService,
-                             StorageServiceImpl storageService,
+    public HouseAdController(HouseAdsService houseAdsService,
+                             StorageService storageService,
                              ModelMapper modelMapper) {
         this.houseAdsService = houseAdsService;
         this.storageService = storageService;
@@ -55,7 +53,7 @@ public class HouseAdController {
     @PostMapping("/create")
     public ResponseEntity<HouseAdDTO> createHouseAd(@RequestBody CreateHouseAdRequestModel requestModel) {
         log.info("createHouseAd - Creating house ad: {}", requestModel.title());
-        var houseAd = houseAdsService.createHouseAd(requestModel);
+        HouseAdDTO houseAd = houseAdsService.createHouseAd(requestModel);
         return ResponseEntity.ok().body(houseAd);
     }
 
@@ -185,9 +183,9 @@ public class HouseAdController {
     @PostMapping("/houseAd/{houseAdId}/like")
     public ResponseEntity<?> postHouseLike(
             @PathVariable("houseAdId") String houseAdId,
-            @AuthenticationPrincipal Authentication authentication) {
+            Authentication authentication) {
         log.info("Liking house ad: {}", houseAdId);
-        var username = ((User)authentication.getPrincipal()).getUsername();
+        var username = authentication.getName();
         var isLikeSuccessful = houseAdsService.likePost(houseAdId, username);
         return (isLikeSuccessful == Boolean.TRUE ? ResponseEntity.ok():
                         ResponseEntity.internalServerError()).build();
@@ -198,9 +196,9 @@ public class HouseAdController {
     @DeleteMapping("/houseAd/{houseAdId}/like")
     public ResponseEntity<?> removeHouseLike(
             @PathVariable("houseAdId") String houseAdId,
-            @AuthenticationPrincipal Authentication authentication) {
+            Authentication authentication) {
         log.info("Liking house ad: {}", houseAdId);
-        var username = ((User)authentication.getPrincipal()).getUsername();
+        var username = authentication.getName();
         var isLikeSuccessful = houseAdsService.removePostLike(houseAdId, username);
         return (isLikeSuccessful == Boolean.TRUE ? ResponseEntity.ok():
                 ResponseEntity.internalServerError()).build();

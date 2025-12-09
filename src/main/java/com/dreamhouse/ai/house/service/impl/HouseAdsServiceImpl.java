@@ -130,7 +130,17 @@ public class HouseAdsServiceImpl implements HouseAdsService {
             houseAd.setHouseAdUid(UUID.randomUUID().toString());
             houseAd.setTitle(createHouseAdRequestModel.title());
             houseAd.setDescription(createHouseAdRequestModel.description());
+            houseAd.setType(createHouseAdRequestModel.type());
+            houseAd.setState(createHouseAdRequestModel.state());
             houseAd.setCity(createHouseAdRequestModel.city());
+            houseAd.setNeighborhood(createHouseAdRequestModel.neighborhood());
+            houseAd.setBeds(createHouseAdRequestModel.beds());
+            houseAd.setBaths(createHouseAdRequestModel.baths());
+            houseAd.setSqft(createHouseAdRequestModel.sqft());
+            houseAd.setParking(createHouseAdRequestModel.parking());
+            houseAd.setPetsAllowed(createHouseAdRequestModel.petsAllowed());
+            houseAd.setWaterfront(createHouseAdRequestModel.waterfront());
+            houseAd.setYearBuilt(createHouseAdRequestModel.yearBuilt());
             houseAd.setUser(user);
 
             if (createHouseAdRequestModel.images() != null) {
@@ -289,7 +299,7 @@ public class HouseAdsServiceImpl implements HouseAdsService {
                         .putObject(objectKey, file.getBytes(), content)
                         .orElseThrow();
 
-                String thumbUrl = put.thumbnailUrl() != null ? put.thumbnailUrl() : put.url();
+                String thumbUrl = put.thumbnailUrl() != null ? put.thumbnailUrl() : "";
 
 
                 var img = new HouseAdImageEntity();

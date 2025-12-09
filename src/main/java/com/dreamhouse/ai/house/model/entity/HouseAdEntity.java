@@ -44,27 +44,38 @@ public class HouseAdEntity implements Serializable {
     @Column(columnDefinition = "text", length = 10000)
     private String description;
 
+    @Column(nullable = false)
     private String city;
 
+    @Column(nullable = false)
     private String state;
 
+    @Column(nullable = false)
     private String neighborhood;
 
+    @Column(nullable = false)
     private Double price;
 
+    @Column(nullable = false)
     private Integer beds;
 
+    @Column(nullable = false)
     private Integer baths;
 
+    @Column(nullable = false)
     private Integer sqft;
 
+    @Column(nullable = false)
     private String type;
 
-    private Boolean parking;
+    @Column(nullable = false)
+    private Boolean parking = Boolean.FALSE;
 
-    private Boolean petsAllowed;
+    @Column(nullable = false)
+    private Boolean petsAllowed = Boolean.FALSE;
 
-    private Boolean waterfront;
+    @Column(nullable = false)
+    private Boolean waterfront = Boolean.FALSE;
 
     private Integer yearBuilt;
 
