@@ -83,8 +83,8 @@ lsof -i :8080
 
 1. **Java Version Mismatch:**
    ```bash
-   # Ensure Java 22 is installed
-   export JAVA_HOME=/path/to/java22
+   # Ensure Java 25 is installed
+   export JAVA_HOME=/path/to/java25
    java -version
    ```
 

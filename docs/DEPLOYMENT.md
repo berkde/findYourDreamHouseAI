@@ -108,9 +108,9 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/findyourdreamhouse
-      - SPRING_DATASOURCE_USERNAME=app_user
-      - SPRING_DATASOURCE_PASSWORD=app_password
+      - POSTGRESQL_URL=jdbc:postgresql://postgres:5432/findyourdreamhouse
+      - POSTGRESQL_USERNAME=app_user
+      - POSTGRESQL_PASSWORD=app_password
       - AWS_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
@@ -238,8 +238,16 @@ aws ecs register-task-definition --cli-input-json file://task-definition.json
       ],
       "secrets": [
         {
-          "name": "SPRING_DATASOURCE_URL",
+          "name": "POSTGRESQL_URL",
           "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:rds-connection-string"
+        },
+        {
+          "name": "POSTGRESQL_USERNAME",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:rds-username"
+        },
+        {
+          "name": "POSTGRESQL_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT:secret:rds-password"
         },
         {
           "name": "JWT_SECRET",
@@ -331,11 +339,21 @@ spec:
         env:
         - name: SPRING_PROFILES_ACTIVE
           value: "prod"
-        - name: SPRING_DATASOURCE_URL
+        - name: POSTGRESQL_URL
           valueFrom:
             secretKeyRef:
               name: app-secrets
               key: database-url
+        - name: POSTGRESQL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: database-username
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: database-password
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:

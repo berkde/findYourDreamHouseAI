@@ -1,6 +1,6 @@
 # Developer Guide
 
-[![Java](https://img.shields.io/badge/Java-22-007396?logo=java)](#)
+[![Java](https://img.shields.io/badge/Java-25-007396?logo=java)](#)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.4-6DB33F?logo=spring-boot)](#)
 [![Maven](https://img.shields.io/badge/Maven-3.9+-blue?logo=apache-maven)](#)
 
@@ -23,7 +23,7 @@ Comprehensive developer documentation for the FindYourDreamHouseAI project.
 
 ### Prerequisites
 
-- **Java 22** (as specified in pom.xml)
+- **Java 25** (as specified in pom.xml)
 - **Maven 3.9+**
 - **PostgreSQL 12+**
 - **AWS CLI** (for AWS integration)
@@ -43,8 +43,8 @@ Comprehensive developer documentation for the FindYourDreamHouseAI project.
    ```
 
 2. **Configure Java SDK:**
-   - File → Project Structure → Project → Project SDK → Java 22
-   - File → Project Structure → Modules → Language Level → 22
+   - File → Project Structure → Project → Project SDK → Java 25
+   - File → Project Structure → Modules → Language Level → 25
 
 3. **Maven Configuration:**
    - File → Settings → Build → Build Tools → Maven
@@ -68,7 +68,7 @@ Comprehensive developer documentation for the FindYourDreamHouseAI project.
 2. **Configure Java:**
    - Open Command Palette (Ctrl+Shift+P)
    - Type "Java: Configure Java Runtime"
-   - Set Java 22 as the default
+   - Set Java 25 as the default
 
 ### Local Development Environment
 
